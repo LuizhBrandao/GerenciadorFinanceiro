@@ -1,4 +1,4 @@
-package br.com.fiap.gerenciadorfinanceiro.model.enums;
+package br.com.gerenciadorfinanceiro.model.enums;
 
 public enum TipoTransacao {
     RECEITA("Receita"),
@@ -14,3 +14,4 @@ public enum TipoTransacao {
         return descricao;
     }
 }
+

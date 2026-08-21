@@ -1,4 +1,4 @@
-package br.com.fiap.gerenciadorfinanceiro.exception;
+package br.com.gerenciadorfinanceiro.exception;
 
 public class EntidadeNaoEncontradaException extends RuntimeException {
 
@@ -6,3 +6,4 @@ public class EntidadeNaoEncontradaException extends RuntimeException {
         super(message);
     }
 }
+

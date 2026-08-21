@@ -1,4 +1,4 @@
-package br.com.fiap.gerenciadorfinanceiro.model.enums;
+package br.com.gerenciadorfinanceiro.model.enums;
 
 public enum TipoConta {
     CORRENTE("Conta Corrente"),
@@ -16,3 +16,4 @@ public enum TipoConta {
         return descricao;
     }
 }
+

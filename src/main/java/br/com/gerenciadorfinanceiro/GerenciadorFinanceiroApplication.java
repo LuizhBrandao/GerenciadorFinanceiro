@@ -1,4 +1,4 @@
-package br.com.fiap.gerenciadorfinanceiro;
+package br.com.gerenciadorfinanceiro;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -10,3 +10,4 @@ public class GerenciadorFinanceiroApplication {
         SpringApplication.run(GerenciadorFinanceiroApplication.class, args);
     }
 }
+

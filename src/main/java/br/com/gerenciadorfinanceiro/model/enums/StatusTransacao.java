@@ -1,4 +1,4 @@
-package br.com.fiap.gerenciadorfinanceiro.model.enums;
+package br.com.gerenciadorfinanceiro.model.enums;
 
 public enum StatusTransacao {
     CONCLUIDA("Concluída"),
@@ -15,3 +15,4 @@ public enum StatusTransacao {
         return descricao;
     }
 }
+

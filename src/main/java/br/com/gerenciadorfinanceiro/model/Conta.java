@@ -1,7 +1,7 @@
-package br.com.fiap.gerenciadorfinanceiro.model;
+package br.com.gerenciadorfinanceiro.model;
 
-import br.com.fiap.gerenciadorfinanceiro.exception.SaldoInsuficienteException;
-import br.com.fiap.gerenciadorfinanceiro.model.enums.TipoConta;
+import br.com.gerenciadorfinanceiro.exception.SaldoInsuficienteException;
+import br.com.gerenciadorfinanceiro.model.enums.TipoConta;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -90,3 +90,4 @@ public class Conta {
         this.ativo = false;
     }
 }
+

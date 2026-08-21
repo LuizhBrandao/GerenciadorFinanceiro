@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>br.com.fiap</groupId>
+    <groupId>br.com</groupId>
     <artifactId>gerenciador-financeiro</artifactId>
     <version>1.0.0</version>
     <name>gerenciador-financeiro</name>

@@ -1,4 +1,4 @@
-package br.com.fiap.gerenciadorfinanceiro.model;
+package br.com.gerenciadorfinanceiro.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -44,3 +44,4 @@ public class Orcamento {
         this.observacao = observacao;
     }
 }
+

@@ -1,7 +1,7 @@
-package br.com.fiap.gerenciadorfinanceiro.model;
+package br.com.gerenciadorfinanceiro.model;
 
-import br.com.fiap.gerenciadorfinanceiro.model.enums.StatusTransacao;
-import br.com.fiap.gerenciadorfinanceiro.model.enums.TipoTransacao;
+import br.com.gerenciadorfinanceiro.model.enums.StatusTransacao;
+import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -79,3 +79,4 @@ public class Transacao {
         }
     }
 }
+

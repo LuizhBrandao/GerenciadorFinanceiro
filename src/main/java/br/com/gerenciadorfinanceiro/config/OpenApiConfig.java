@@ -1,4 +1,4 @@
-package br.com.fiap.gerenciadorfinanceiro.config;
+package br.com.gerenciadorfinanceiro.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
@@ -26,3 +26,4 @@ public class OpenApiConfig {
                                 .url("https://springdoc.org")));
     }
 }
+
