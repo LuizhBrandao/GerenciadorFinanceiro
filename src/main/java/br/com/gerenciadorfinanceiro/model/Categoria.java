@@ -17,7 +17,11 @@ public class Categoria {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 80)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
+    @Column(nullable = false, length = 80)
     private String nome;
 
     @Enumerated(EnumType.STRING)
@@ -30,7 +34,8 @@ public class Categoria {
     @Column(length = 30)
     private String icone;
 
-    public Categoria(String nome, TipoTransacao tipo, String descricao, String icone) {
+    public Categoria(Usuario usuario, String nome, TipoTransacao tipo, String descricao, String icone) {
+        this.usuario = usuario;
         this.nome = nome;
         this.tipo = tipo;
         this.descricao = descricao;

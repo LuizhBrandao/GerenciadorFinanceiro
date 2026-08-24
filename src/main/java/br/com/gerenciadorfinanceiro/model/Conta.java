@@ -21,6 +21,10 @@ public class Conta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
     @Column(nullable = false, length = 100)
     private String nome;
 
@@ -40,7 +44,8 @@ public class Conta {
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 
-    public Conta(String nome, String instituicaoFinanceira, TipoConta tipoConta, BigDecimal saldoInicial) {
+    public Conta(Usuario usuario, String nome, String instituicaoFinanceira, TipoConta tipoConta, BigDecimal saldoInicial) {
+        this.usuario = usuario;
         this.nome = nome;
         this.instituicaoFinanceira = instituicaoFinanceira;
         this.tipoConta = tipoConta;

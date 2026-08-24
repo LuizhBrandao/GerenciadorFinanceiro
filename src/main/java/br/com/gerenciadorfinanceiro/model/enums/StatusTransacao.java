@@ -1,8 +1,9 @@
 package br.com.gerenciadorfinanceiro.model.enums;
 
 public enum StatusTransacao {
-    CONCLUIDA("Concluída"),
+    PAGA("Paga"),
     PENDENTE("Pendente"),
+    ATRASADA("Atrasada"),
     CANCELADA("Cancelada");
 
     private final String descricao;

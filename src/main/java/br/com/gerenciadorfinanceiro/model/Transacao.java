@@ -22,6 +22,10 @@ public class Transacao {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
     @Column(nullable = false, length = 150)
     private String descricao;
 
@@ -34,7 +38,7 @@ public class Transacao {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private StatusTransacao status = StatusTransacao.CONCLUIDA;
+    private StatusTransacao status = StatusTransacao.PAGA;
 
     @Column(nullable = false)
     private LocalDate dataTransacao;
@@ -53,12 +57,21 @@ public class Transacao {
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataRegistro;
 
-    public Transacao(String descricao, BigDecimal valor, TipoTransacao tipo, StatusTransacao status,
+    @ManyToMany
+    @JoinTable(
+        name = "transacao_tags",
+        joinColumns = @JoinColumn(name = "transacao_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private java.util.Set<Tag> tags = new java.util.HashSet<>();
+
+    public Transacao(Usuario usuario, String descricao, BigDecimal valor, TipoTransacao tipo, StatusTransacao status,
                      LocalDate dataTransacao, Conta conta, Categoria categoria, String observacao) {
+        this.usuario = usuario;
         this.descricao = descricao;
         this.valor = valor;
         this.tipo = tipo;
-        this.status = (status != null) ? status : StatusTransacao.CONCLUIDA;
+        this.status = (status != null) ? status : StatusTransacao.PAGA;
         this.dataTransacao = (dataTransacao != null) ? dataTransacao : LocalDate.now();
         this.conta = conta;
         this.categoria = categoria;
@@ -75,7 +88,7 @@ public class Transacao {
             this.dataTransacao = LocalDate.now();
         }
         if (this.status == null) {
-            this.status = StatusTransacao.CONCLUIDA;
+            this.status = StatusTransacao.PAGA;
         }
     }
 }
