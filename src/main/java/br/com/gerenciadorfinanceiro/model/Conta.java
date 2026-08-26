@@ -2,6 +2,7 @@ package br.com.gerenciadorfinanceiro.model;
 
 import br.com.gerenciadorfinanceiro.exception.SaldoInsuficienteException;
 import br.com.gerenciadorfinanceiro.model.enums.TipoConta;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,7 @@ public class Conta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;

@@ -2,6 +2,7 @@ package br.com.gerenciadorfinanceiro.model;
 
 import br.com.gerenciadorfinanceiro.model.enums.StatusTransacao;
 import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,7 @@ public class Transacao {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
@@ -43,11 +45,11 @@ public class Transacao {
     @Column(nullable = false)
     private LocalDate dataTransacao;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "conta_id", nullable = false)
     private Conta conta;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "categoria_id", nullable = false)
     private Categoria categoria;
 
@@ -57,7 +59,7 @@ public class Transacao {
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataRegistro;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "transacao_tags",
         joinColumns = @JoinColumn(name = "transacao_id"),
