@@ -63,6 +63,17 @@ function formatStatusTransacao(status) {
     return map[status] || status;
 }
 
+function formatFrequenciaRecorrencia(freq) {
+    const map = {
+        'MENSAL': 'Mensal',
+        'SEMANAL': 'Semanal',
+        'QUINZENAL': 'Quinzenal',
+        'ANUAL': 'Anual',
+        'DIARIA': 'Diária'
+    };
+    return map[freq] || freq || 'Mensal';
+}
+
 // Sistema de Notificações Toast
 function showToast(message, type = 'info', duration = 3500) {
     let container = document.getElementById('toast-container');

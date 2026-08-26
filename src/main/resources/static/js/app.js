@@ -11,6 +11,7 @@ const app = {
         contasModule.init();
         categoriasModule.init();
         transacoesModule.init();
+        recorrenciasModule.init();
         dashboardModule.init();
 
         this.bindNavigation();
@@ -98,6 +99,11 @@ const app = {
                 transacoesModule.loadTransacoes();
                 contasModule.loadContas();
                 categoriasModule.loadCategorias();
+                break;
+            case 'recorrencias':
+                contasModule.loadContas();
+                categoriasModule.loadCategorias();
+                recorrenciasModule.loadRecorrencias();
                 break;
             case 'contas':
                 contasModule.loadContas();

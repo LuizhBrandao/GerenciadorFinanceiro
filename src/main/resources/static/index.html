@@ -183,6 +183,10 @@
                         <i class="fas fa-tags text-base text-slate-400"></i>
                         <span>Categorias</span>
                     </a>
+                    <a href="#" data-view="recorrencias" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fas fa-repeat text-base text-slate-400"></i>
+                        <span>Recorrências & Fixas</span>
+                    </a>
                 </nav>
             </div>
 
@@ -474,6 +478,69 @@
                     </div>
                 </section>
 
+                <!-- ========================================== -->
+                <!-- VIEW: RECORRÊNCIAS & DESPESAS FIXAS        -->
+                <!-- ========================================== -->
+                <section id="view-recorrencias" class="view-section space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">Recorrências & Despesas Fixas</h2>
+                            <p class="text-xs text-slate-400">Automatize e acompanhe despesas fixas mensais e receitas periódicas</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="recorrenciasModule.processarPendentes()"
+                                class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-2">
+                                <i class="fas fa-arrows-rotate"></i> Processar Pendências
+                            </button>
+                            <button onclick="recorrenciasModule.openNewRecorrenciaModal()"
+                                class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Nova Recorrência
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Cards de Resumo de Recorrências -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Despesas Fixas / Mês</span>
+                                <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+                                    <i class="fas fa-calendar-minus"></i>
+                                </div>
+                            </div>
+                            <div id="rec-total-despesas-fixas" class="text-2xl font-black text-rose-600 tracking-tight">R$ 0,00</div>
+                            <p class="text-[11px] text-slate-400 mt-1">Impacto mensal estimado em saídas</p>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Receitas Recorrentes / Mês</span>
+                                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                                    <i class="fas fa-calendar-plus"></i>
+                                </div>
+                            </div>
+                            <div id="rec-total-receitas" class="text-2xl font-black text-emerald-600 tracking-tight">R$ 0,00</div>
+                            <p class="text-[11px] text-slate-400 mt-1">Entradas periódicas previstas</p>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Recorrências Ativas</span>
+                                <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                                    <i class="fas fa-repeat"></i>
+                                </div>
+                            </div>
+                            <div id="rec-total-ativas" class="text-2xl font-black text-slate-800 tracking-tight">0</div>
+                            <p class="text-[11px] text-slate-400 mt-1">Lançamentos programados em vigor</p>
+                        </div>
+                    </div>
+
+                    <!-- Grid de Cards de Recorrências -->
+                    <div id="recorrencias-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -757,6 +824,104 @@
         </div>
     </div>
 
+    <!-- Modal de Recorrência / Despesa Fixa (Criar / Editar) -->
+    <div id="modal-recorrencia" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="modal-content bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-5">
+                <h3 id="modal-recorrencia-title" class="text-lg font-bold text-slate-800">Nova Despesa Fixa / Recorrência</h3>
+                <button data-close-modal class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="form-recorrencia" class="space-y-4">
+                <input type="hidden" id="recorrencia-id">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-descricao">Descrição *</label>
+                    <input type="text" id="recorrencia-descricao" required placeholder="Ex: Aluguel, Internet Fibra, Netflix, Salário"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-valor">Valor (R$) *</label>
+                        <input type="number" step="0.01" min="0.01" id="recorrencia-valor" required placeholder="0.00"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-tipo">Tipo *</label>
+                        <select id="recorrencia-tipo" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="DESPESA">Despesa (Fixa)</option>
+                            <option value="RECEITA">Receita (Recorrente)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-frequencia">Periodicidade *</label>
+                        <select id="recorrencia-frequencia" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="MENSAL">Mensal</option>
+                            <option value="SEMANAL">Semanal</option>
+                            <option value="QUINZENAL">Quinzenal</option>
+                            <option value="ANUAL">Anual</option>
+                            <option value="DIARIA">Diária</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-dia">Dia do Vencimento *</label>
+                        <input type="number" min="1" max="31" id="recorrencia-dia" required value="10" placeholder="1 a 31"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-conta">Conta Bancária *</label>
+                        <select id="recorrencia-conta" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="">Selecione uma conta</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-categoria">Categoria *</label>
+                        <select id="recorrencia-categoria" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="">Selecione uma categoria</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-data-inicio">Data de Início *</label>
+                        <input type="date" id="recorrencia-data-inicio" required
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-data-fim">Data de Fim (Opcional)</label>
+                        <input type="date" id="recorrencia-data-fim"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="recorrencia-observacao">Observações (Opcional)</label>
+                    <textarea id="recorrencia-observacao" rows="2" placeholder="Notas sobre a recorrência, contrato, código de barras..."
+                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3">
+                    <button type="button" data-close-modal class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
+                        Salvar Recorrência
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast Notification Container -->
     <div id="toast-container"></div>
 
@@ -767,6 +932,7 @@
     <script src="js/contas.js"></script>
     <script src="js/categorias.js"></script>
     <script src="js/transacoes.js"></script>
+    <script src="js/recorrencias.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/app.js"></script>
 </body>
