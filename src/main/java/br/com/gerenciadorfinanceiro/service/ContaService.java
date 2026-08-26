@@ -29,15 +29,18 @@ public class ContaService {
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Conta não encontrada ou não pertence ao usuário."));
     }
 
+    @SuppressWarnings("null")
     public Conta salvar(Conta conta) {
         return contaRepository.save(conta);
     }
 
+    @SuppressWarnings("null")
     public void excluir(Long id, Long usuarioId) {
         Conta conta = buscarPorId(id, usuarioId);
         contaRepository.delete(conta);
     }
 
+    @SuppressWarnings("null")
     public BigDecimal calcularSaldoConsolidado(Long usuarioId) {
         return listarContas(usuarioId).stream()
                 .map(Conta::getSaldo)

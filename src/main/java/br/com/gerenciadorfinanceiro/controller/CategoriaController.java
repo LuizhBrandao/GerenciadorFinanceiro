@@ -30,6 +30,7 @@ public class CategoriaController {
     }
 
     @DeleteMapping("/{id}")
+    @SuppressWarnings("null")
     public ResponseEntity<Void> deletar(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
         Categoria categoria = categoriaRepository.findByIdAndUsuarioId(id, usuario.getId())
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Categoria não encontrada."));
