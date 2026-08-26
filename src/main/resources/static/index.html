@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador Financeiro - Controle Pessoal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- ========================================== -->
+    <!-- 1. SEÇÃO DE AUTENTICAÇÃO (LOGIN / REGISTRO) -->
+    <!-- ========================================== -->
+    <section id="auth-section" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+        <div class="w-full max-w-md">
+            <!-- Branding Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/30 text-white text-2xl mb-4">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold text-white tracking-tight">Gerenciador Financeiro</h1>
+                <p class="text-slate-400 text-sm mt-1">Controle inteligente das suas finanças pessoais</p>
+            </div>
+
+            <!-- Card de Login -->
+            <div id="auth-login-card" class="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-slate-800">Acesse sua conta</h2>
+                    <p class="text-xs text-slate-500 mt-1">Informe seu e-mail e senha para prosseguir</p>
+                </div>
+
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="login-email">E-mail</label>
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                            <input type="email" id="login-email" required placeholder="seu.email@exemplo.com"
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="login-password">Senha</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                            <input type="password" id="login-password" required placeholder="••••••••"
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                        class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all">
+                        Entrar
+                    </button>
+                </form>
+
+                <div class="mt-6 pt-6 border-t border-slate-100 text-center">
+                    <p class="text-xs text-slate-500">
+                        Não tem uma conta? 
+                        <a href="#" id="btn-show-register" class="font-bold text-indigo-600 hover:text-indigo-700 ml-1">Criar conta gratuita</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Card de Registro -->
+            <div id="auth-register-card" class="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20 hidden">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-slate-800">Criar nova conta</h2>
+                    <p class="text-xs text-slate-500 mt-1">Preencha seus dados para começar a gerenciar</p>
+                </div>
+
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="register-name">Nome Completo</label>
+                        <div class="relative">
+                            <i class="fas fa-user absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                            <input type="text" id="register-name" required placeholder="Seu Nome"
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="register-email">E-mail</label>
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                            <input type="email" id="register-email" required placeholder="seu.email@exemplo.com"
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="register-password">Senha (mínimo 6 caracteres)</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                            <input type="password" id="register-password" minlength="6" required placeholder="••••••••"
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                        class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all">
+                        Criar Conta
+                    </button>
+                </form>
+
+                <div class="mt-6 pt-6 border-t border-slate-100 text-center">
+                    <p class="text-xs text-slate-500">
+                        Já possui conta? 
+                        <a href="#" id="btn-show-login" class="font-bold text-indigo-600 hover:text-indigo-700 ml-1">Fazer Login</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. LAYOUT DA APLICAÇÃO (DASHBOARD SPA)     -->
+    <!-- ========================================== -->
+    <div id="app-section" class="flex-1 flex overflow-hidden min-h-screen hidden">
+        
+        <!-- SIDEBAR DE NAVEGAÇÃO -->
+        <aside id="app-sidebar" class="w-64 bg-white border-r border-slate-100 flex flex-col justify-between fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 -translate-x-full lg:translate-x-0">
+            <div>
+                <!-- Brand / Logo -->
+                <div class="p-6 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg shadow-md shadow-indigo-500/20">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-black text-slate-800 text-base leading-tight tracking-tight">Financeiro</h2>
+                        <span class="text-[10px] uppercase tracking-wider font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">Painel Pessoal</span>
+                    </div>
+                </div>
+
+                <!-- Botão de Ação Rápida -->
+                <div class="px-5 mb-4">
+                    <button onclick="transacoesModule.openNewTransacaoModal()"
+                        class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all">
+                        <i class="fas fa-plus"></i>
+                        <span>Nova Transação</span>
+                    </button>
+                </div>
+
+                <!-- Menu de Navegação -->
+                <nav class="px-3 space-y-1.5">
+                    <a href="#" data-view="dashboard" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fas fa-home text-base text-slate-400"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" data-view="transacoes" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fas fa-exchange-alt text-base text-slate-400"></i>
+                        <span>Transações</span>
+                    </a>
+                    <a href="#" data-view="contas" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fas fa-wallet text-base text-slate-400"></i>
+                        <span>Contas Bancárias</span>
+                    </a>
+                    <a href="#" data-view="categorias" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fas fa-tags text-base text-slate-400"></i>
+                        <span>Categorias</span>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Footer do Sidebar (Logout) -->
+            <div class="p-4 border-t border-slate-100">
+                <button id="btn-logout" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors">
+                    <i class="fas fa-sign-out-alt text-sm"></i>
+                    <span>Sair da Conta</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="flex-1 flex flex-col overflow-y-auto bg-slate-50 min-h-screen">
+            
+            <!-- Barra Superior (Header) -->
+            <header class="bg-white/80 backdrop-blur-md sticky top-0 z-30 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <button id="btn-mobile-menu" class="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-lg font-extrabold text-slate-800 tracking-tight">Visão Geral Financeira</h1>
+                        <p class="text-xs text-slate-400">Acompanhe seu fluxo de caixa em tempo real</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <!-- Resumo Rápido de Saldo -->
+                    <div class="hidden sm:flex flex-col text-right">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Saldo Consolidado</span>
+                        <span id="header-saldo-rapido" class="text-sm font-black text-indigo-600">R$ 0,00</span>
+                    </div>
+
+                    <!-- Perfil do Usuário -->
+                    <div class="flex items-center gap-2 pl-3 border-l border-slate-100">
+                        <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 font-bold flex items-center justify-center text-xs">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="user-email-display" class="text-xs font-semibold text-slate-700 hidden md:inline">usuario@email.com</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- CONTAINER DAS VIEWS -->
+            <div class="p-6 max-w-7xl w-full mx-auto space-y-6">
+
+                <!-- ========================================== -->
+                <!-- VIEW: DASHBOARD                            -->
+                <!-- ========================================== -->
+                <section id="view-dashboard" class="view-section space-y-6">
+                    <!-- Cards de Métricas Principais -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        
+                        <!-- Saldo Consolidado -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Saldo Consolidado</span>
+                                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">
+                                    <i class="fas fa-vault"></i>
+                                </div>
+                            </div>
+                            <div id="dash-saldo-consolidado" class="text-2xl font-black text-slate-800 tracking-tight">R$ 0,00</div>
+                            <p class="text-xs text-slate-400 mt-1">Soma de todas as contas ativas</p>
+                        </div>
+
+                        <!-- Receitas do Mês -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Receitas (Mês)</span>
+                                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+                                    <i class="fas fa-arrow-trend-up"></i>
+                                </div>
+                            </div>
+                            <div id="dash-receitas-mes" class="text-2xl font-black text-emerald-600 tracking-tight">R$ 0,00</div>
+                            <p class="text-xs text-slate-400 mt-1">Ganhos no mês atual</p>
+                        </div>
+
+                        <!-- Despesas do Mês -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Despesas (Mês)</span>
+                                <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-sm">
+                                    <i class="fas fa-arrow-trend-down"></i>
+                                </div>
+                            </div>
+                            <div id="dash-despesas-mes" class="text-2xl font-black text-rose-600 tracking-tight">R$ 0,00</div>
+                            <p class="text-xs text-slate-400 mt-1">Gastos no mês atual</p>
+                        </div>
+
+                        <!-- Balanço Líquido -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Balanço do Mês</span>
+                                <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
+                                    <i class="fas fa-scale-balanced"></i>
+                                </div>
+                            </div>
+                            <div id="dash-balanco-mes" class="text-2xl font-black text-slate-800 tracking-tight">R$ 0,00</div>
+                            <p class="text-xs text-slate-400 mt-1">Receitas menos Despesas</p>
+                        </div>
+
+                    </div>
+
+                    <!-- Seção dos Gráficos Interativos -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Gráfico de Gastos por Categoria (Doughnut) -->
+                        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
+                            <div class="mb-4">
+                                <h3 class="text-base font-bold text-slate-800">Despesas por Categoria</h3>
+                                <p class="text-xs text-slate-400">Distribuição de saídas por segmento</p>
+                            </div>
+                            <div class="relative h-64 w-full flex items-center justify-center">
+                                <canvas id="chart-categorias"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico de Evolução Financeira (Barras) -->
+                        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm lg:col-span-2 flex flex-col justify-between">
+                            <div class="mb-4">
+                                <h3 class="text-base font-bold text-slate-800">Evolução Mensal (Últimos 6 meses)</h3>
+                                <p class="text-xs text-slate-400">Comparativo histórico de Receitas vs Despesas</p>
+                            </div>
+                            <div class="relative h-64 w-full">
+                                <canvas id="chart-evolucao"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Últimas Transações -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-800">Transações Recentes</h3>
+                                <p class="text-xs text-slate-400">Últimas movimentações financeiras</p>
+                            </div>
+                            <button onclick="app.navigateTo('transacoes')" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+                                Ver todas <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                        <th class="py-2.5 px-4">Data</th>
+                                        <th class="py-2.5 px-4">Descrição</th>
+                                        <th class="py-2.5 px-4">Conta</th>
+                                        <th class="py-2.5 px-4">Status</th>
+                                        <th class="py-2.5 px-4 text-right">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-recentes-container" class="divide-y divide-slate-50">
+                                    <!-- Inserido dinamicamente via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================== -->
+                <!-- VIEW: TRANSAÇÕES                           -->
+                <!-- ========================================== -->
+                <section id="view-transacoes" class="view-section space-y-6 hidden">
+                    <!-- Top Actions & Title -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">Transações</h2>
+                            <p class="text-xs text-slate-400">Histórico completo e filtros detalhados</p>
+                        </div>
+                        <button onclick="transacoesModule.openNewTransacaoModal()"
+                            class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 self-start sm:self-auto">
+                            <i class="fas fa-plus"></i> Nova Transação
+                        </button>
+                    </div>
+
+                    <!-- Filtros Avançados -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                        <form id="form-filtro-transacoes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Data Inicial</label>
+                                <input type="date" id="filtro-data-inicial" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Data Final</label>
+                                <input type="date" id="filtro-data-final" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Conta</label>
+                                <select id="filtro-conta" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="">Todas as Contas</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Categoria</label>
+                                <select id="filtro-categoria" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="">Todas as Categorias</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Valor Mínimo</label>
+                                <input type="number" step="0.01" id="filtro-valor-min" placeholder="R$ 0,00" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors">
+                                    <i class="fas fa-filter mr-1"></i> Filtrar
+                                </button>
+                                <button type="button" id="btn-limpar-filtros" title="Limpar Filtros" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-colors">
+                                    <i class="fas fa-rotate-left"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tabela de Transações -->
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="px-5 py-3.5">Data</th>
+                                        <th class="px-5 py-3.5">Descrição</th>
+                                        <th class="px-5 py-3.5">Categoria</th>
+                                        <th class="px-5 py-3.5">Conta</th>
+                                        <th class="px-5 py-3.5">Tipo</th>
+                                        <th class="px-5 py-3.5">Status</th>
+                                        <th class="px-5 py-3.5 text-right">Valor</th>
+                                        <th class="px-5 py-3.5 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transacoes-table-body">
+                                    <!-- Inserido dinamicamente via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="transacoes-empty-state" class="py-12 text-center text-slate-400 hidden">
+                            <i class="fas fa-receipt text-3xl mb-2 text-slate-300"></i>
+                            <p class="text-sm font-semibold">Nenhuma transação encontrada</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================== -->
+                <!-- VIEW: CONTAS BANCÁRIAS                     -->
+                <!-- ========================================== -->
+                <section id="view-contas" class="view-section space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">Contas Bancárias & Carteiras</h2>
+                            <p class="text-xs text-slate-400">Gerencie seus saldos, contas correntes, investimentos e transferências</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="contasModule.openTransferenciaModal()"
+                                class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-2">
+                                <i class="fas fa-arrows-rotate"></i> Transferência
+                            </button>
+                            <button onclick="contasModule.openNewContaModal()"
+                                class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Nova Conta
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Grid de Cards de Contas -->
+                    <div id="contas-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                </section>
+
+                <!-- ========================================== -->
+                <!-- VIEW: CATEGORIAS                           -->
+                <!-- ========================================== -->
+                <section id="view-categorias" class="view-section space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">Categorias</h2>
+                            <p class="text-xs text-slate-400">Organize suas receitas e despesas com categorias personalizadas</p>
+                        </div>
+                        <button onclick="categoriasModule.openNewCategoriaModal()"
+                            class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 self-start sm:self-auto">
+                            <i class="fas fa-plus"></i> Nova Categoria
+                        </button>
+                    </div>
+
+                    <!-- Grid de Categorias -->
+                    <div id="categorias-list-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. MODAIS DA APLICAÇÃO                     -->
+    <!-- ========================================== -->
+
+    <!-- Modal de Transação (Criar / Editar / Parcelar) -->
+    <div id="modal-transacao" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="modal-content bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-5">
+                <h3 id="modal-transacao-title" class="text-lg font-bold text-slate-800">Nova Transação</h3>
+                <button data-close-modal class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="form-transacao" class="space-y-4">
+                <input type="hidden" id="transacao-id">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transacao-descricao">Descrição *</label>
+                    <input type="text" id="transacao-descricao" required placeholder="Ex: Supermercado, Salário, Internet"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transacao-valor">Valor (R$) *</label>
+                        <input type="number" step="0.01" min="0.01" id="transacao-valor" required placeholder="0.00"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transacao-data">Data *</label>
+                        <input type="date" id="transacao-data" required
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transacao-tipo">Tipo *</label>
+                        <select id="transacao-tipo" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="DESPESA">Despesa</option>
+                            <option value="RECEITA">Receita</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transacao-status">Status *</label>
+                        <select id="transacao-status" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="PAGA">Paga / Efetuada</option>
+                            <option value="PENDENTE">Pendente</option>
+                            <option value="ATRASADA">Atrasada</option>
+                            <option value="CANCELADA">Cancelada</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transacao-conta">Conta Bancária *</label>
+                        <select id="transacao-conta" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="">Selecione uma conta</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transacao-categoria">Categoria *</label>
+                        <select id="transacao-categoria" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="">Selecione uma categoria</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Toggle Parcelamento (Apenas criação) -->
+                <div id="transacao-parcelado-container" class="pt-2">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="transacao-parcelado-check" class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                        <span class="text-xs font-bold text-slate-700">Lançamento Parcelado?</span>
+                    </label>
+                    <div id="transacao-parcelas-group" class="mt-2 hidden">
+                        <label class="block text-xs text-slate-500 mb-1">Quantidade de Parcelas:</label>
+                        <input type="number" id="transacao-parcelas" min="2" max="96" value="2"
+                            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transacao-observacao">Observações (Opcional)</label>
+                    <textarea id="transacao-observacao" rows="2" placeholder="Notas adicionais..."
+                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3">
+                    <button type="button" data-close-modal class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
+                        Salvar Transação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Conta (Criar / Editar) -->
+    <div id="modal-conta" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="modal-content bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between mb-5">
+                <h3 id="modal-conta-title" class="text-lg font-bold text-slate-800">Nova Conta Bancária</h3>
+                <button data-close-modal class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="form-conta" class="space-y-4">
+                <input type="hidden" id="conta-id">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="conta-nome">Nome da Conta *</label>
+                    <input type="text" id="conta-nome" required placeholder="Ex: Nubank, Carteira Principal"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="conta-instituicao">Instituição Financeira</label>
+                    <input type="text" id="conta-instituicao" placeholder="Ex: Nubank, Itaú, Santander, Bradesco"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="conta-tipo">Tipo de Conta *</label>
+                    <select id="conta-tipo" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="CORRENTE">Conta Corrente</option>
+                        <option value="POUPANCA">Conta Poupança</option>
+                        <option value="INVESTIMENTO">Conta de Investimento</option>
+                        <option value="CARTEIRA">Carteira Física / Dinheiro</option>
+                    </select>
+                </div>
+
+                <div id="conta-saldo-group">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="conta-saldo">Saldo Inicial (R$)</label>
+                    <input type="number" step="0.01" id="conta-saldo" placeholder="0.00" value="0.00"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3">
+                    <button type="button" data-close-modal class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
+                        Salvar Conta
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Transferência entre Contas -->
+    <div id="modal-transferencia" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="modal-content bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-lg font-bold text-slate-800">Transferir entre Contas</h3>
+                <button data-close-modal class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="form-transferencia" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transferencia-origem">Conta de Origem (Debitar) *</label>
+                    <select id="transferencia-origem" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">Selecione a origem</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transferencia-destino">Conta de Destino (Creditar) *</label>
+                    <select id="transferencia-destino" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">Selecione o destino</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="transferencia-valor">Valor da Transferência (R$) *</label>
+                    <input type="number" step="0.01" min="0.01" id="transferencia-valor" required placeholder="0.00"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3">
+                    <button type="button" data-close-modal class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
+                        Realizar Transferência
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Nova Categoria -->
+    <div id="modal-categoria" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="modal-content bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-lg font-bold text-slate-800">Nova Categoria</h3>
+                <button data-close-modal class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="form-categoria" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="categoria-nome">Nome da Categoria *</label>
+                    <input type="text" id="categoria-nome" required placeholder="Ex: Alimentação, Transporte, Salário"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="categoria-tipo">Tipo da Categoria *</label>
+                    <select id="categoria-tipo" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="DESPESA">Despesa</option>
+                        <option value="RECEITA">Receita</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="categoria-icone">Ícone (FontAwesome Class)</label>
+                    <select id="categoria-icone" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="fa-utensils">🍽️ Alimentação (fa-utensils)</option>
+                        <option value="fa-car">🚗 Transporte (fa-car)</option>
+                        <option value="fa-house">🏠 Moradia (fa-house)</option>
+                        <option value="fa-money-bill-wave">💵 Salário / Renda (fa-money-bill-wave)</option>
+                        <option value="fa-shopping-bag">🛍️ Compras (fa-shopping-bag)</option>
+                        <option value="fa-heart-pulse">🩺 Saúde (fa-heart-pulse)</option>
+                        <option value="fa-graduation-cap">🎓 Educação (fa-graduation-cap)</option>
+                        <option value="fa-gamepad">🎮 Lazer (fa-gamepad)</option>
+                        <option value="fa-chart-line">📈 Investimentos (fa-chart-line)</option>
+                        <option value="fa-bolt">⚡ Contas Básicas (fa-bolt)</option>
+                        <option value="fa-tag">🏷️ Outros (fa-tag)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" for="categoria-descricao">Descrição (Opcional)</label>
+                    <input type="text" id="categoria-descricao" placeholder="Breve resumo da categoria"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3">
+                    <button type="button" data-close-modal class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
+                        Criar Categoria
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Extrato Detalhado da Conta -->
+    <div id="modal-extrato" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="modal-content bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <h3 id="extrato-modal-title" class="text-lg font-bold text-slate-800">Extrato da Conta</h3>
+                <button data-close-modal class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="extrato-list-container">
+                <!-- Inserido dinamicamente via JS -->
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 text-right">
+                <button data-close-modal class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts da Aplicação em Ordem de Dependência -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/contas.js"></script>
+    <script src="js/categorias.js"></script>
+    <script src="js/transacoes.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
