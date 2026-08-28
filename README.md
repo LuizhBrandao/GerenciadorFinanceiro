@@ -1,4 +1,4 @@
-# 💰 Gerenciador Financeiro Pessoal
+#  Gerenciador Financeiro Pessoal
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg?style=flat&logo=openjdk)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen.svg?style=flat&logo=springboot)](https://spring.io/projects/spring-boot)
@@ -12,7 +12,7 @@ Aplicação Full-Stack completa para controle financeiro pessoal, desenvolvida c
 
 ---
 
-## 📑 Sumário
+##  Sumário
 
 - [Visão Geral & Arquitetura](#-visão-geral--arquitetura)
 - [Funcionalidades Principais](#-funcionalidades-principais)
@@ -27,7 +27,7 @@ Aplicação Full-Stack completa para controle financeiro pessoal, desenvolvida c
 
 ---
 
-## 🏛️ Visão Geral & Arquitetura
+##  Visão Geral & Arquitetura
 
 O sistema adota o padrão de arquitetura em camadas (**Layered Architecture**) no backend e uma **SPA modular** no frontend:
 
@@ -52,15 +52,15 @@ O sistema adota o padrão de arquitetura em camadas (**Layered Architecture**) n
 
 ---
 
-## ✨ Funcionalidades Principais
+##  Funcionalidades Principais
 
-### 🔐 1. Autenticação & Segurança
+###  1. Autenticação & Segurança
 - Cadastro e login de usuários com senhas criptografadas via **BCrypt**.
 - Emissão e validação de tokens **JWT (JSON Web Token)** stateless.
 - Proteção de rotas da API com Spring Security e injeção automática do usuário autenticado (`@AuthenticationPrincipal`).
 - Configuração de **CORS** para permitir desenvolvimento desacoplado.
 
-### 📊 2. Dashboard Financeiro
+###  2. Dashboard Financeiro
 - Indicadores em tempo real:
   - **Saldo Consolidado Total** (somatório de contas ativas).
   - **Total de Receitas do Mês**.
@@ -71,12 +71,12 @@ O sistema adota o padrão de arquitetura em camadas (**Layered Architecture**) n
   - *Evolução Mensal Receitas vs Despesas* dos últimos 6 meses (Gráfico de Barras).
 - Tabela dinâmica com as transações mais recentes.
 
-### 💳 3. Gestão de Contas & Transferências
+###  3. Gestão de Contas & Transferências
 - Cadastro, edição e exclusão de contas bancárias (Conta Corrente, Poupança, Investimento, Carteira Física/Dinheiro).
 - **Transferência entre contas**: Débito e crédito automáticos entre contas com validação de saldo e regras de negócio transacionais.
 - **Extrato Detalhado**: Histórico de movimentações por conta (`/contas/{id}/extrato`).
 
-### 💸 4. Transações Financeiras
+###  4. Transações Financeiras
 - Lançamento de **Receitas** e **Despesas** com atualização automática do saldo da conta.
 - Suporte a **Lançamento Parcelado**: Divisão automática de compras em N parcelas mensais (`/transacoes/parcelado`).
 - **Filtros Avançados**:
@@ -85,13 +85,13 @@ O sistema adota o padrão de arquitetura em camadas (**Layered Architecture**) n
   - Filtro por Faixa de Valor (mínimo e máximo).
 - Edição e exclusão de transações com estorno automático de saldos.
 
-### 🏷️ 5. Categorias Customizadas
+###  5. Categorias Customizadas
 - Cadastro e listagem de categorias personalizadas (ex: *Alimentação, Moradia, Transporte, Lazer, Salário, Investimentos*).
 - Seleção de ícones visuais (FontAwesome).
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+##  Tecnologias Utilizadas
 
 ### Backend
 - **Java 21**
@@ -119,7 +119,7 @@ O sistema adota o padrão de arquitetura em camadas (**Layered Architecture**) n
 
 ---
 
-## 📂 Estrutura do Projeto
+##  Estrutura do Projeto
 
 ```
 Gerenciador Financeiro/
@@ -146,7 +146,7 @@ Gerenciador Financeiro/
 
 ---
 
-## ⚙️ Pré-requisitos
+##  Pré-requisitos
 
 Antes de iniciar, certifique-se de ter instalado em sua máquina:
 - [JDK 21+](https://www.oracle.com/java/technologies/downloads/#java21)
@@ -155,7 +155,7 @@ Antes de iniciar, certifique-se de ter instalado em sua máquina:
 
 ---
 
-## 🚀 Como Executar a Aplicação
+##  Como Executar a Aplicação
 
 ### 1. Clonar o repositório
 ```bash
@@ -185,7 +185,7 @@ O servidor iniciará em `http://localhost:8080`.
 
 ---
 
-## 📖 Documentação da API (Swagger / OpenAPI)
+##  Documentação da API (Swagger / OpenAPI)
 
 Com a aplicação em execução, acesse a documentação interativa do Swagger UI:
 - **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
@@ -193,7 +193,7 @@ Com a aplicação em execução, acesse a documentação interativa do Swagger U
 
 ---
 
-## 📡 Endpoints da API REST
+##  Endpoints da API REST
 
 | Módulo | Método | Endpoint | Descrição | Autenticação |
 | :--- | :--- | :--- | :--- | :--- |
@@ -220,7 +220,7 @@ Com a aplicação em execução, acesse a documentação interativa do Swagger U
 
 ---
 
-## 🧪 Testes
+##  Testes
 
 Para executar a suíte de testes automatizados com o banco H2 em memória:
 ```bash
@@ -229,6 +229,6 @@ mvn test
 
 ---
 
-## 👤 Autor
+##  Autor
 
 Desenvolvido por **[Luiz Brandão](https://github.com/LuizhBrandao)**.
