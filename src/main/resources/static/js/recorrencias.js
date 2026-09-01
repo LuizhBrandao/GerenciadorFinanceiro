@@ -171,15 +171,19 @@ const recorrenciasModule = {
     },
 
     openNewRecorrenciaModal() {
-        const form = document.getElementById('form-recorrencia');
-        if (form) form.reset();
-        document.getElementById('recorrencia-id').value = '';
-        document.getElementById('recorrencia-data-inicio').value = getTodayIsoDate();
-        document.getElementById('recorrencia-dia').value = new Date().getDate();
-        document.getElementById('modal-recorrencia-title').textContent = 'Nova Despesa Fixa / Recorrência';
-        
-        this.updateRecorrenciasSelects();
-        openModal('modal-recorrencia');
+        if (window.transacoesModule) {
+            window.transacoesModule.openNewTransacaoModal('RECORRENTE');
+        } else {
+            const form = document.getElementById('form-recorrencia');
+            if (form) form.reset();
+            document.getElementById('recorrencia-id').value = '';
+            document.getElementById('recorrencia-data-inicio').value = getTodayIsoDate();
+            document.getElementById('recorrencia-dia').value = new Date().getDate();
+            document.getElementById('modal-recorrencia-title').textContent = 'Nova Despesa Fixa / Recorrência';
+            
+            this.updateRecorrenciasSelects();
+            openModal('modal-recorrencia');
+        }
     },
 
     openEditRecorrenciaModal(id) {
@@ -247,6 +251,12 @@ const recorrenciasModule = {
 
             closeModal('modal-recorrencia');
             await this.loadRecorrencias();
+            if (window.transacoesModule) {
+                await window.transacoesModule.loadTransacoes();
+            }
+            if (window.dashboardModule) {
+                window.dashboardModule.loadSummary();
+            }
         } catch (error) {
             showToast(error.message || 'Erro ao salvar recorrência.', 'error');
         }
@@ -293,7 +303,10 @@ const recorrenciasModule = {
             }
             await this.loadRecorrencias();
             if (window.transacoesModule) {
-                window.transacoesModule.loadTransacoes();
+                await window.transacoesModule.loadTransacoes();
+            }
+            if (window.contasModule) {
+                await window.contasModule.loadContas();
             }
             if (window.dashboardModule) {
                 window.dashboardModule.loadSummary();

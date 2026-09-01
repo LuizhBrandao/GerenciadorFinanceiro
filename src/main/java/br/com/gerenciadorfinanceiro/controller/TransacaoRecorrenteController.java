@@ -42,19 +42,7 @@ public class TransacaoRecorrenteController {
             @RequestBody TransacaoRecorrente dados,
             @AuthenticationPrincipal Usuario usuario) {
 
-        TransacaoRecorrente existente = recorrenteService.buscarPorId(id, usuario.getId());
-        existente.setDescricao(dados.getDescricao());
-        existente.setValor(dados.getValor());
-        existente.setTipo(dados.getTipo());
-        existente.setFrequencia(dados.getFrequencia());
-        existente.setDiaVencimento(dados.getDiaVencimento());
-        existente.setConta(dados.getConta());
-        existente.setCategoria(dados.getCategoria());
-        existente.setDataInicio(dados.getDataInicio());
-        existente.setDataFim(dados.getDataFim());
-        existente.setObservacao(dados.getObservacao());
-
-        return ResponseEntity.ok(recorrenteService.salvar(existente));
+        return ResponseEntity.ok(recorrenteService.atualizar(id, dados, usuario.getId()));
     }
 
     @PatchMapping("/{id}/status")

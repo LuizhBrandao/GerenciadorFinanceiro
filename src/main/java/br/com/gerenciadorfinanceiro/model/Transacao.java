@@ -53,6 +53,11 @@ public class Transacao {
     @JoinColumn(name = "categoria_id", nullable = false)
     private Categoria categoria;
 
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recorrencia_id")
+    private TransacaoRecorrente recorrencia;
+
     @Column(length = 500)
     private String observacao;
 

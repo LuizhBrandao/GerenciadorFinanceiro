@@ -9,6 +9,7 @@ import br.com.gerenciadorfinanceiro.model.enums.FrequenciaRecorrencia;
 import br.com.gerenciadorfinanceiro.model.enums.StatusTransacao;
 import br.com.gerenciadorfinanceiro.repository.CategoriaRepository;
 import br.com.gerenciadorfinanceiro.repository.TransacaoRecorrenteRepository;
+import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +28,9 @@ public class TransacaoRecorrenteService {
 
     @Autowired
     private TransacaoRecorrenteRepository transacaoRecorrenteRepository;
+
+    @Autowired
+    private TransacaoRepository transacaoRepository;
 
     @Autowired
     private TransacaoService transacaoService;
@@ -67,7 +70,74 @@ public class TransacaoRecorrenteService {
             recorrencia.setDiaVencimento(31);
         }
 
-        return transacaoRecorrenteRepository.save(recorrencia);
+        if (recorrencia.getDataInicio() == null) {
+            recorrencia.setDataInicio(LocalDate.now());
+        }
+
+        TransacaoRecorrente salva = transacaoRecorrenteRepository.save(recorrencia);
+
+        // Gera automaticamente todas as ocorrências retroativas (passadas) e futuras para o ano
+        gerarOcorrenciasRecorrencia(salva, null);
+
+        return salva;
+    }
+
+    @Transactional
+    public TransacaoRecorrente atualizar(Long id, TransacaoRecorrente dados, Long usuarioId) {
+        TransacaoRecorrente existente = buscarPorId(id, usuarioId);
+
+        Conta conta = contaService.buscarPorId(dados.getConta().getId(), usuarioId);
+        Categoria categoria = categoriaRepository.findByIdAndUsuarioId(dados.getCategoria().getId(), usuarioId)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Categoria não encontrada ou não pertence ao usuário."));
+
+        String descricaoAntiga = existente.getDescricao();
+
+        existente.setDescricao(dados.getDescricao());
+        existente.setValor(dados.getValor());
+        existente.setTipo(dados.getTipo());
+        existente.setFrequencia(dados.getFrequencia());
+        existente.setDiaVencimento(dados.getDiaVencimento());
+        existente.setConta(conta);
+        existente.setCategoria(categoria);
+        existente.setDataInicio(dados.getDataInicio());
+        existente.setDataFim(dados.getDataFim());
+        existente.setObservacao(dados.getObservacao());
+
+        TransacaoRecorrente salva = transacaoRecorrenteRepository.save(existente);
+
+        // Atualiza em cascata a categoria, conta e descrição de todas as transações desta recorrência
+        sincronizarTransacoesDaRecorrencia(salva, descricaoAntiga);
+
+        // Gera eventuais novos meses se a vigência mudou
+        gerarOcorrenciasRecorrencia(salva, null);
+
+        return salva;
+    }
+
+    @Transactional
+    public void sincronizarTransacoesDaRecorrencia(TransacaoRecorrente rec, String descricaoAntiga) {
+        List<Transacao> transacoes = transacaoRepository.findByUsuarioId(rec.getUsuario().getId());
+
+        for (Transacao t : transacoes) {
+            boolean pertence = (t.getRecorrencia() != null && t.getRecorrencia().getId().equals(rec.getId()))
+                    || (t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()))
+                    || (descricaoAntiga != null && t.getDescricao().trim().equalsIgnoreCase(descricaoAntiga.trim()));
+
+            if (pertence) {
+                t.setRecorrencia(rec);
+                t.setDescricao(rec.getDescricao());
+                t.setCategoria(rec.getCategoria());
+                t.setConta(rec.getConta());
+                t.setTipo(rec.getTipo());
+
+                // Se a transação estiver pendente, atualiza também o valor caso tenha mudado
+                if (t.getStatus() == StatusTransacao.PENDENTE && rec.getValor() != null) {
+                    t.setValor(rec.getValor());
+                }
+
+                transacaoRepository.save(t);
+            }
+        }
     }
 
     @Transactional
@@ -86,27 +156,148 @@ public class TransacaoRecorrenteService {
     @Transactional
     public Transacao lancarInstancia(Long id, Long usuarioId, LocalDate dataLancamento) {
         TransacaoRecorrente recorrencia = buscarPorId(id, usuarioId);
-        return gerarTransacao(recorrencia, dataLancamento != null ? dataLancamento : calcularDataAlvo(recorrencia, LocalDate.now()));
+        LocalDate dataAlvo = dataLancamento != null ? dataLancamento : calcularDataAlvo(recorrencia, LocalDate.now());
+        return criarEGravarTransacao(recorrencia, dataAlvo, StatusTransacao.PAGA);
     }
 
     @Transactional
     public List<Transacao> processarRecorrenciasUsuario(Long usuarioId, LocalDate dataReferencia) {
-        LocalDate ref = (dataReferencia != null) ? dataReferencia : LocalDate.now();
         List<TransacaoRecorrente> ativas = transacaoRecorrenteRepository.findByUsuarioIdAndAtivoTrue(usuarioId);
-        List<Transacao> geradas = new ArrayList<>();
+        List<Transacao> todasGeradas = new ArrayList<>();
 
         for (TransacaoRecorrente rec : ativas) {
-            if (deveGerarInstancia(rec, ref)) {
-                LocalDate dataAlvo = calcularDataAlvo(rec, ref);
-                Transacao t = gerarTransacao(rec, dataAlvo);
-                geradas.add(t);
+            sincronizarTransacoesDaRecorrencia(rec, null);
+            List<Transacao> geradas = gerarOcorrenciasRecorrencia(rec, dataReferencia);
+            todasGeradas.addAll(geradas);
+        }
+        return todasGeradas;
+    }
+
+    /**
+     * Gera e sincroniza todas as instâncias da recorrência desde a data de início até a data limite (fim do ano ou dataFim).
+     * - Meses passados recebem StatusTransacao.PAGA
+     * - Mês atual / meses futuros recebem StatusTransacao.PENDENTE
+     */
+    @Transactional
+    public List<Transacao> gerarOcorrenciasRecorrencia(TransacaoRecorrente rec, LocalDate ateData) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicio = rec.getDataInicio() != null ? rec.getDataInicio() : hoje;
+        
+        int anoLimite = Math.max(hoje.getYear(), inicio.getYear());
+        LocalDate fim = rec.getDataFim() != null 
+                ? rec.getDataFim() 
+                : (ateData != null ? ateData : LocalDate.of(anoLimite, 12, 31));
+
+        if (fim.isBefore(inicio)) {
+            return List.of();
+        }
+
+        FrequenciaRecorrencia freq = rec.getFrequencia() != null ? rec.getFrequencia() : FrequenciaRecorrencia.MENSAL;
+        List<Transacao> geradas = new ArrayList<>();
+        LocalDate cursor = inicio;
+
+        // Busca transações já cadastradas do usuário para prevenir duplicidades
+        List<Transacao> existentes = transacaoRepository.findByUsuarioId(rec.getUsuario().getId());
+
+        if (freq == FrequenciaRecorrencia.MENSAL) {
+            LocalDate mesAtual = LocalDate.of(inicio.getYear(), inicio.getMonth(), 1);
+            LocalDate mesFim = LocalDate.of(fim.getYear(), fim.getMonth(), 1);
+
+            while (!mesAtual.isAfter(mesFim)) {
+                int maxDia = mesAtual.lengthOfMonth();
+                int dia = Math.min(rec.getDiaVencimento() != null ? rec.getDiaVencimento() : 1, maxDia);
+                LocalDate dataAlvo = LocalDate.of(mesAtual.getYear(), mesAtual.getMonth(), dia);
+
+                if (!dataAlvo.isBefore(inicio) && !dataAlvo.isAfter(fim)) {
+                    // Verifica se já existe lançamento similar no mesmo mês/ano
+                    boolean jaExiste = existentes.stream().anyMatch(t ->
+                            t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
+                            t.getDataTransacao().getYear() == dataAlvo.getYear() &&
+                            t.getDataTransacao().getMonth() == dataAlvo.getMonth()
+                    );
+
+                    if (!jaExiste) {
+                        StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
+                        Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
+                        geradas.add(t);
+                        existentes.add(t);
+                    }
+                }
+                mesAtual = mesAtual.plusMonths(1);
+            }
+        } else if (freq == FrequenciaRecorrencia.SEMANAL) {
+            while (!cursor.isAfter(fim)) {
+                final LocalDate dataAlvo = cursor;
+                boolean jaExiste = existentes.stream().anyMatch(t ->
+                        t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
+                        t.getDataTransacao().equals(dataAlvo)
+                );
+                if (!jaExiste) {
+                    StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
+                    Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
+                    geradas.add(t);
+                    existentes.add(t);
+                }
+                cursor = cursor.plusWeeks(1);
+            }
+        } else if (freq == FrequenciaRecorrencia.QUINZENAL) {
+            while (!cursor.isAfter(fim)) {
+                final LocalDate dataAlvo = cursor;
+                boolean jaExiste = existentes.stream().anyMatch(t ->
+                        t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
+                        t.getDataTransacao().equals(dataAlvo)
+                );
+                if (!jaExiste) {
+                    StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
+                    Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
+                    geradas.add(t);
+                    existentes.add(t);
+                }
+                cursor = cursor.plusDays(15);
+            }
+        } else if (freq == FrequenciaRecorrencia.ANUAL) {
+            LocalDate anoCursor = inicio;
+            while (!anoCursor.isAfter(fim)) {
+                final LocalDate dataAlvo = anoCursor;
+                boolean jaExiste = existentes.stream().anyMatch(t ->
+                        t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
+                        t.getDataTransacao().getYear() == dataAlvo.getYear()
+                );
+                if (!jaExiste) {
+                    StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
+                    Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
+                    geradas.add(t);
+                    existentes.add(t);
+                }
+                anoCursor = anoCursor.plusYears(1);
+            }
+        } else if (freq == FrequenciaRecorrencia.DIARIA) {
+            while (!cursor.isAfter(fim)) {
+                final LocalDate dataAlvo = cursor;
+                boolean jaExiste = existentes.stream().anyMatch(t ->
+                        t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
+                        t.getDataTransacao().equals(dataAlvo)
+                );
+                if (!jaExiste) {
+                    StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
+                    Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
+                    geradas.add(t);
+                    existentes.add(t);
+                }
+                cursor = cursor.plusDays(1);
             }
         }
+
+        if (!geradas.isEmpty()) {
+            rec.setUltimoLancamento(geradas.get(geradas.size() - 1).getDataTransacao());
+            transacaoRecorrenteRepository.save(rec);
+        }
+
         return geradas;
     }
 
     /**
-     * Job agendado que roda diariamente às 01:00 da manhã para gerar lançamentos automáticos.
+     * Job agendado que roda diariamente às 01:00 da manhã para atualizar status de lançamentos ou gerar novas instâncias.
      */
     @Scheduled(cron = "0 0 1 * * ?")
     @Transactional
@@ -118,61 +309,13 @@ public class TransacaoRecorrenteService {
 
         for (TransacaoRecorrente rec : ativas) {
             try {
-                if (deveGerarInstancia(rec, hoje)) {
-                    LocalDate dataAlvo = calcularDataAlvo(rec, hoje);
-                    gerarTransacao(rec, dataAlvo);
-                    count++;
-                }
+                List<Transacao> geradas = gerarOcorrenciasRecorrencia(rec, hoje);
+                count += geradas.size();
             } catch (Exception e) {
                 log.error("Erro ao processar transação recorrente ID: {}", rec.getId(), e);
             }
         }
         log.info("Processamento concluído. {} transações geradas automaticamente.", count);
-    }
-
-    private boolean deveGerarInstancia(TransacaoRecorrente rec, LocalDate ref) {
-        if (!Boolean.TRUE.equals(rec.getAtivo())) {
-            return false;
-        }
-
-        // Verifica período de vigência
-        if (rec.getDataInicio() != null && ref.isBefore(rec.getDataInicio())) {
-            return false;
-        }
-        if (rec.getDataFim() != null && ref.isAfter(rec.getDataFim())) {
-            return false;
-        }
-
-        FrequenciaRecorrencia freq = rec.getFrequencia() != null ? rec.getFrequencia() : FrequenciaRecorrencia.MENSAL;
-        LocalDate ultimo = rec.getUltimoLancamento();
-
-        switch (freq) {
-            case DIARIA:
-                return ultimo == null || ultimo.isBefore(ref);
-
-            case SEMANAL:
-                return ultimo == null || ChronoUnit.DAYS.between(ultimo, ref) >= 7;
-
-            case QUINZENAL:
-                return ultimo == null || ChronoUnit.DAYS.between(ultimo, ref) >= 15;
-
-            case MENSAL:
-                if (ultimo != null && ultimo.getYear() == ref.getYear() && ultimo.getMonthValue() == ref.getMonthValue()) {
-                    return false; // Já lançado neste mês
-                }
-                LocalDate dataAlvoMensal = calcularDataAlvo(rec, ref);
-                return !ref.isBefore(dataAlvoMensal);
-
-            case ANUAL:
-                if (ultimo != null && ultimo.getYear() == ref.getYear()) {
-                    return false; // Já lançado neste ano
-                }
-                LocalDate dataAlvoAnual = calcularDataAlvo(rec, ref);
-                return !ref.isBefore(dataAlvoAnual);
-
-            default:
-                return false;
-        }
     }
 
     private LocalDate calcularDataAlvo(TransacaoRecorrente rec, LocalDate ref) {
@@ -181,31 +324,23 @@ public class TransacaoRecorrenteService {
         return LocalDate.of(ref.getYear(), ref.getMonthValue(), dia);
     }
 
-    private Transacao gerarTransacao(TransacaoRecorrente rec, LocalDate dataTransacao) {
+    private Transacao criarEGravarTransacao(TransacaoRecorrente rec, LocalDate dataTransacao, StatusTransacao status) {
         String sufixoObservacao = rec.getObservacao() != null && !rec.getObservacao().isBlank()
                 ? " - " + rec.getObservacao()
                 : "";
 
         Transacao transacao = new Transacao(
                 rec.getUsuario(),
-                rec.getDescricao() + " (Recorrência)",
+                rec.getDescricao(),
                 rec.getValor(),
                 rec.getTipo(),
-                StatusTransacao.PENDENTE,
+                status,
                 dataTransacao,
                 rec.getConta(),
                 rec.getCategoria(),
-                "[Lançamento Automático Recorrente]" + sufixoObservacao
+                "[Lançamento Recorrente]" + sufixoObservacao
         );
 
-        Transacao salva = transacaoService.salvar(transacao);
-
-        rec.setUltimoLancamento(dataTransacao);
-        transacaoRecorrenteRepository.save(rec);
-
-        log.info("Transação recorrente lançada com sucesso: {} (R$ {}) para o dia {}",
-                rec.getDescricao(), rec.getValor(), dataTransacao);
-
-        return salva;
+        return transacaoService.salvar(transacao);
     }
 }

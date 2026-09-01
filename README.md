@@ -201,7 +201,10 @@ Com a aplicação em execução, acesse a documentação interativa do Swagger U
 | **Auth** | `POST` | `/auth/login` | Realiza login e retorna o Token JWT | Pública |
 | **Contas** | `GET` | `/contas` | Lista todas as contas do usuário logado | Bearer Token |
 | **Contas** | `GET` | `/contas/{id}` | Obtém os detalhes de uma conta | Bearer Token |
-| **Contas** | `GET` | `/contas/saldo-consolidado` | Retorna o somatório dos saldos | Bearer Token |
+| **Contas** | `GET` | `/contas/saldo-consolidado` | Retorna o saldo consolidado de contas correntes e carteiras | Bearer Token |
+| **Contas** | `GET` | `/contas/saldo-investimentos` | Retorna o total investido / aplicado (Investimentos & Poupança) | Bearer Token |
+| **Contas** | `GET` | `/contas/patrimonio-total` | Retorna o patrimônio líquido total somado | Bearer Token |
+| **Contas** | `GET` | `/contas/resumo` | Retorna o resumo completo estruturado de saldos | Bearer Token |
 | **Contas** | `GET` | `/contas/{id}/extrato` | Retorna o extrato detalhado de uma conta | Bearer Token |
 | **Contas** | `POST` | `/contas` | Cadastra uma nova conta bancária | Bearer Token |
 | **Contas** | `PUT` | `/contas/{id}` | Atualiza dados de uma conta | Bearer Token |

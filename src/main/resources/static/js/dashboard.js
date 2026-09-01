@@ -12,14 +12,14 @@ const dashboardModule = {
 
     async loadSummary() {
         try {
-            // Carregar saldo consolidado, contas e transações em paralelo
-            const [saldoConsolidado, contas, transacoes] = await Promise.all([
-                api.get('/contas/saldo-consolidado').catch(() => 0),
+            // Carregar resumo consolidado de saldos, contas e transações em paralelo
+            const [resumoSaldos, contas, transacoes] = await Promise.all([
+                api.get('/contas/resumo').catch(() => null),
                 api.get('/contas').catch(() => []),
                 api.get('/transacoes').catch(() => [])
             ]);
 
-            this.renderMetricCards(saldoConsolidado, transacoes);
+            this.renderMetricCards(resumoSaldos, contas, transacoes);
             this.renderRecentTransactions(transacoes);
             this.renderCharts(transacoes);
         } catch (error) {
@@ -27,8 +27,26 @@ const dashboardModule = {
         }
     },
 
-    renderMetricCards(saldoConsolidado, transacoes) {
-        // Calcular totais de receitas e despesas
+    renderMetricCards(resumoSaldos, contas, transacoes) {
+        // Obter valores de contas correntes e investimentos
+        let saldoCorrentes = 0;
+        let saldoInvestimentos = 0;
+
+        if (resumoSaldos) {
+            saldoCorrentes = parseFloat(resumoSaldos.saldoContasCorrentes) || 0;
+            saldoInvestimentos = parseFloat(resumoSaldos.saldoInvestimentos) || 0;
+        } else if (Array.isArray(contas)) {
+            contas.forEach(c => {
+                const s = parseFloat(c.saldo) || 0;
+                if (isContaInvestimentoOuReserva(c.tipoConta)) {
+                    saldoInvestimentos += s;
+                } else {
+                    saldoCorrentes += s;
+                }
+            });
+        }
+
+        // Calcular totais de receitas e despesas efetuadas (PAGAS)
         let totalReceitas = 0;
         let totalDespesas = 0;
 
@@ -37,20 +55,27 @@ const dashboardModule = {
 
         let receitasMes = 0;
         let despesasMes = 0;
+        let receitasPendentes = 0;
+        let despesasPendentes = 0;
 
         transacoes.forEach(t => {
             const valor = parseFloat(t.valor) || 0;
             const data = new Date(t.dataTransacao);
+            const isCurrentMonth = (data.getMonth() === currentMonth && data.getFullYear() === currentYear);
 
             if (t.tipo === 'RECEITA') {
-                totalReceitas += valor;
-                if (data.getMonth() === currentMonth && data.getFullYear() === currentYear) {
-                    receitasMes += valor;
+                if (t.status === 'PAGA') {
+                    totalReceitas += valor;
+                    if (isCurrentMonth) receitasMes += valor;
+                } else if (t.status === 'PENDENTE' && isCurrentMonth) {
+                    receitasPendentes += valor;
                 }
             } else if (t.tipo === 'DESPESA') {
-                totalDespesas += valor;
-                if (data.getMonth() === currentMonth && data.getFullYear() === currentYear) {
-                    despesasMes += valor;
+                if (t.status === 'PAGA') {
+                    totalDespesas += valor;
+                    if (isCurrentMonth) despesasMes += valor;
+                } else if (t.status === 'PENDENTE' && isCurrentMonth) {
+                    despesasPendentes += valor;
                 }
             }
         });
@@ -59,13 +84,17 @@ const dashboardModule = {
 
         // Atualizar elementos no DOM
         const elSaldoConsolidado = document.getElementById('dash-saldo-consolidado');
+        const elTotalInvestimentos = document.getElementById('dash-total-investimentos');
         const elReceitasMes = document.getElementById('dash-receitas-mes');
         const elDespesasMes = document.getElementById('dash-despesas-mes');
         const elBalancoMes = document.getElementById('dash-balanco-mes');
         const elHeaderSaldo = document.getElementById('header-saldo-rapido');
+        const elHeaderInvestimentos = document.getElementById('header-investimentos-rapido');
 
-        if (elSaldoConsolidado) elSaldoConsolidado.textContent = formatCurrency(saldoConsolidado);
-        if (elHeaderSaldo) elHeaderSaldo.textContent = formatCurrency(saldoConsolidado);
+        if (elSaldoConsolidado) elSaldoConsolidado.textContent = formatCurrency(saldoCorrentes);
+        if (elTotalInvestimentos) elTotalInvestimentos.textContent = formatCurrency(saldoInvestimentos);
+        if (elHeaderSaldo) elHeaderSaldo.textContent = formatCurrency(saldoCorrentes);
+        if (elHeaderInvestimentos) elHeaderInvestimentos.textContent = formatCurrency(saldoInvestimentos);
         if (elReceitasMes) elReceitasMes.textContent = formatCurrency(receitasMes);
         if (elDespesasMes) elDespesasMes.textContent = formatCurrency(despesasMes);
         
@@ -137,9 +166,9 @@ const dashboardModule = {
         const ctx = document.getElementById('chart-categorias');
         if (!ctx) return;
 
-        // Agrupar despesas por categoria
+        // Agrupar despesas efetuadas (PAGAS) por categoria
         const despesasPorCategoria = {};
-        transacoes.filter(t => t.tipo === 'DESPESA').forEach(t => {
+        transacoes.filter(t => t.tipo === 'DESPESA' && t.status === 'PAGA').forEach(t => {
             const catName = t.categoria ? t.categoria.nome : 'Outras';
             despesasPorCategoria[catName] = (despesasPorCategoria[catName] || 0) + parseFloat(t.valor || 0);
         });
@@ -234,7 +263,7 @@ const dashboardModule = {
             let rec = 0;
             let desp = 0;
 
-            transacoes.forEach(t => {
+            transacoes.filter(t => t.status === 'PAGA').forEach(t => {
                 const tDate = new Date(t.dataTransacao);
                 if (tDate.getMonth() === m && tDate.getFullYear() === y) {
                     if (t.tipo === 'RECEITA') rec += parseFloat(t.valor || 0);
