@@ -18,7 +18,8 @@ INSERT INTO categorias (id, usuario_id, nome, tipo, descricao, icone)
 VALUES 
 (1, 1, 'Salário e Remuneração', 'RECEITA', 'Salário fixo mensal, adiantamentos, 13º salário e benefícios em folha.', 'fa-briefcase'),
 (2, 1, 'Rendimentos & Investimentos', 'RECEITA', 'Dividendos, juros sobre capital próprio (JCP), rendimentos de CDI/Poupança e fundos imobiliários.', 'fa-chart-line'),
-(3, 1, 'Freelance & Serviços Extras', 'RECEITA', 'Trabalhos autônomos, consultorias, projetos paralelos e vendas pontuais.', 'fa-laptop')
+(3, 1, 'Freelance & Serviços Extras', 'RECEITA', 'Trabalhos autônomos, consultorias, projetos paralelos e vendas pontuais.', 'fa-laptop'),
+(13, 1, 'Outras Receitas', 'RECEITA', 'Outras entradas e ganhos gerais.', 'fa-tag')
 ON CONFLICT (id) DO NOTHING;
 
 -- 3.2 Despesas
@@ -30,7 +31,9 @@ VALUES
 (7, 1, 'Saúde & Bem-Estar', 'DESPESA', 'Plano de saúde, consultas, farmácia/medicamentos, exames e academia/atividades físicas.', 'fa-heart-pulse'),
 (8, 1, 'Educação & Desenvolvimento', 'DESPESA', 'Mensalidades escolares/faculdade, cursos online, livros, certificações e workshops.', 'fa-graduation-cap'),
 (9, 1, 'Lazer & Entretenimento', 'DESPESA', 'Assinaturas de streaming (Netflix, Spotify), restaurantes/bares, viagens, cinema e passeios.', 'fa-ticket'),
-(10, 1, 'Cuidados Pessoais & Compras', 'DESPESA', 'Roupas, calçados, barbearia/salão de beleza, cosméticos e itens de uso pessoal.', 'fa-bag-shopping')
+(10, 1, 'Cuidados Pessoais & Compras', 'DESPESA', 'Roupas, calçados, barbearia/salão de beleza, cosméticos e itens de uso pessoal.', 'fa-bag-shopping'),
+(11, 1, 'Contas Básicas & Energia', 'DESPESA', 'Contas de energia, água, luz, gás e taxas.', 'fa-bolt'),
+(12, 1, 'Outros', 'DESPESA', 'Outros gastos e despesas gerais.', 'fa-tag')
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. Contas Bancárias de Exemplo

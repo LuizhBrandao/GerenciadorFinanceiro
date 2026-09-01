@@ -107,7 +107,13 @@ public class DataInitializer implements CommandLineRunner {
                 new Categoria(usuario, "Lazer & Entretenimento", TipoTransacao.DESPESA,
                         "Assinaturas de streaming (Netflix, Spotify), restaurantes/bares, viagens, cinema e passeios.", "fa-ticket"),
                 new Categoria(usuario, "Cuidados Pessoais & Compras", TipoTransacao.DESPESA,
-                        "Roupas, calçados, barbearia/salão de beleza, cosméticos e itens de uso pessoal.", "fa-bag-shopping")
+                        "Roupas, calçados, barbearia/salão de beleza, cosméticos e itens de uso pessoal.", "fa-bag-shopping"),
+                new Categoria(usuario, "Contas Básicas & Energia", TipoTransacao.DESPESA,
+                        "Contas de energia, água, luz, gás e taxas.", "fa-bolt"),
+                new Categoria(usuario, "Outros", TipoTransacao.DESPESA,
+                        "Outros gastos e despesas gerais.", "fa-tag"),
+                new Categoria(usuario, "Outras Receitas", TipoTransacao.RECEITA,
+                        "Outras entradas e ganhos gerais.", "fa-tag")
         );
     }
 }
