@@ -34,6 +34,9 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private br.com.gerenciadorfinanceiro.repository.CategoriaRepository categoriaRepository;
+
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@RequestBody @Validated AuthDto data) {
         var usernamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.senha());
@@ -56,7 +59,11 @@ public class AuthController {
         PreferenciasUsuario preferencias = new PreferenciasUsuario(newUser);
         newUser.setPreferencias(preferencias);
 
-        this.repository.save(newUser);
+        newUser = this.repository.save(newUser);
+
+        // Cria as 10 categorias essenciais automaticamente para o novo usuário
+        var categorias = br.com.gerenciadorfinanceiro.config.DataInitializer.criarCategoriasPadraoParaUsuario(newUser);
+        this.categoriaRepository.saveAll(categorias);
 
         return ResponseEntity.ok().build();
     }
