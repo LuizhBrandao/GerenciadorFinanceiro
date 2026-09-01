@@ -1,5 +1,6 @@
 package br.com.gerenciadorfinanceiro.controller;
 
+import br.com.gerenciadorfinanceiro.controller.dto.ResumoSaldosDto;
 import br.com.gerenciadorfinanceiro.model.Conta;
 import br.com.gerenciadorfinanceiro.model.Transacao;
 import br.com.gerenciadorfinanceiro.model.Usuario;
@@ -36,6 +37,21 @@ public class ContaController {
     @GetMapping("/saldo-consolidado")
     public ResponseEntity<BigDecimal> saldoConsolidado(@AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(contaService.calcularSaldoConsolidado(usuario.getId()));
+    }
+
+    @GetMapping("/saldo-investimentos")
+    public ResponseEntity<BigDecimal> saldoInvestimentos(@AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(contaService.calcularSaldoInvestimentos(usuario.getId()));
+    }
+
+    @GetMapping("/patrimonio-total")
+    public ResponseEntity<BigDecimal> patrimonioTotal(@AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(contaService.calcularPatrimonioTotal(usuario.getId()));
+    }
+
+    @GetMapping("/resumo")
+    public ResponseEntity<ResumoSaldosDto> obterResumoSaldos(@AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(contaService.obterResumoSaldos(usuario.getId()));
     }
 
     @GetMapping("/{id}/extrato")

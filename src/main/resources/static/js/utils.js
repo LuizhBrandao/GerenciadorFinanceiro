@@ -38,11 +38,15 @@ function getTodayIsoDate() {
 function formatTipoConta(tipo) {
     const map = {
         'CORRENTE': 'Conta Corrente',
-        'POUPANCA': 'Conta Poupança',
+        'POUPANCA': 'Conta Poupança / Reserva',
         'INVESTIMENTO': 'Investimento',
         'CARTEIRA': 'Carteira / Dinheiro'
     };
     return map[tipo] || tipo || 'Outro';
+}
+
+function isContaInvestimentoOuReserva(tipo) {
+    return tipo === 'INVESTIMENTO' || tipo === 'POUPANCA';
 }
 
 function formatTipoTransacao(tipo) {

@@ -15,5 +15,13 @@ public enum TipoConta {
     public String getDescricao() {
         return descricao;
     }
+
+    public boolean isInvestimentoOuReserva() {
+        return this == INVESTIMENTO || this == POUPANCA;
+    }
+
+    public boolean isOperacional() {
+        return this == CORRENTE || this == CARTEIRA;
+    }
 }
 

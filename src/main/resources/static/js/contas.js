@@ -24,8 +24,13 @@ const contasModule = {
 
     async loadContas() {
         try {
-            const data = await api.get('/contas');
-            this.contas = data || [];
+            const [contasData, resumoData] = await Promise.all([
+                api.get('/contas').catch(() => []),
+                api.get('/contas/resumo').catch(() => null)
+            ]);
+
+            this.contas = contasData || [];
+            this.updateResumoSaldos(resumoData);
             this.renderContasCards();
             this.updateContasSelects();
             return this.contas;
@@ -33,6 +38,40 @@ const contasModule = {
             showToast('Erro ao carregar contas.', 'error');
             return [];
         }
+    },
+
+    updateResumoSaldos(resumo) {
+        let saldoCorrentes = 0;
+        let saldoInvestimentos = 0;
+        let patrimonioTotal = 0;
+
+        if (resumo) {
+            saldoCorrentes = parseFloat(resumo.saldoContasCorrentes) || 0;
+            saldoInvestimentos = parseFloat(resumo.saldoInvestimentos) || 0;
+            patrimonioTotal = parseFloat(resumo.patrimonioTotal) || 0;
+        } else {
+            this.contas.forEach(c => {
+                const s = parseFloat(c.saldo) || 0;
+                if (isContaInvestimentoOuReserva(c.tipoConta)) {
+                    saldoInvestimentos += s;
+                } else {
+                    saldoCorrentes += s;
+                }
+            });
+            patrimonioTotal = saldoCorrentes + saldoInvestimentos;
+        }
+
+        const elResumoCorrente = document.getElementById('contas-resumo-corrente');
+        const elResumoInvestimento = document.getElementById('contas-resumo-investimento');
+        const elResumoPatrimonio = document.getElementById('contas-resumo-patrimonio');
+        const elHeaderSaldo = document.getElementById('header-saldo-rapido');
+        const elHeaderInvestimentos = document.getElementById('header-investimentos-rapido');
+
+        if (elResumoCorrente) elResumoCorrente.textContent = formatCurrency(saldoCorrentes);
+        if (elResumoInvestimento) elResumoInvestimento.textContent = formatCurrency(saldoInvestimentos);
+        if (elResumoPatrimonio) elResumoPatrimonio.textContent = formatCurrency(patrimonioTotal);
+        if (elHeaderSaldo) elHeaderSaldo.textContent = formatCurrency(saldoCorrentes);
+        if (elHeaderInvestimentos) elHeaderInvestimentos.textContent = formatCurrency(saldoInvestimentos);
     },
 
     renderContasCards() {
@@ -57,12 +96,12 @@ const contasModule = {
 
         const tipoIcons = {
             'CORRENTE': 'fa-credit-card text-blue-500 bg-blue-50',
-            'POUPANCA': 'fa-piggy-bank text-emerald-500 bg-emerald-50',
+            'POUPANCA': 'fa-piggy-bank text-purple-500 bg-purple-50',
             'INVESTIMENTO': 'fa-chart-line text-purple-500 bg-purple-50',
             'CARTEIRA': 'fa-wallet text-amber-500 bg-amber-50'
         };
 
-        container.innerHTML = this.contas.map(conta => {
+        const renderCard = (conta) => {
             const iconClass = tipoIcons[conta.tipoConta] || 'fa-university text-indigo-500 bg-indigo-50';
             const saldoColor = (conta.saldo >= 0) ? 'text-slate-800' : 'text-rose-600';
 
@@ -102,7 +141,58 @@ const contasModule = {
                     </div>
                 </div>
             `;
-        }).join('');
+        };
+
+        // Separar contas em 2 contextos financeiros
+        const contasCorrentes = this.contas.filter(c => !isContaInvestimentoOuReserva(c.tipoConta));
+        const contasInvestimentos = this.contas.filter(c => isContaInvestimentoOuReserva(c.tipoConta));
+
+        const subtotalCorrentes = contasCorrentes.reduce((acc, c) => acc + (parseFloat(c.saldo) || 0), 0);
+        const subtotalInvestimentos = contasInvestimentos.reduce((acc, c) => acc + (parseFloat(c.saldo) || 0), 0);
+
+        let html = '';
+
+        // Seção 1: Contas Correntes & Carteiras (Caixa Operacional)
+        html += `
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                        <h3 class="text-base font-extrabold text-slate-800 tracking-tight">Contas Correntes & Carteiras (Caixa Operacional)</h3>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${contasCorrentes.length}</span>
+                    </div>
+                    <div class="text-xs font-bold text-slate-500">
+                        Subtotal Disponível: <span class="text-slate-800 font-extrabold">${formatCurrency(subtotalCorrentes)}</span>
+                    </div>
+                </div>
+                ${contasCorrentes.length > 0 
+                    ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${contasCorrentes.map(renderCard).join('')}</div>`
+                    : `<div class="p-5 bg-white rounded-2xl border border-slate-100 text-center text-slate-400 text-xs font-medium">Nenhuma conta corrente ou carteira cadastrada.</div>`
+                }
+            </div>
+        `;
+
+        // Seção 2: Investimentos & Poupança (Patrimônio Alocado & Reservas)
+        html += `
+            <div class="space-y-3 pt-2">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                        <h3 class="text-base font-extrabold text-slate-800 tracking-tight">Investimentos & Poupança (Patrimônio & Reservas)</h3>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">${contasInvestimentos.length}</span>
+                    </div>
+                    <div class="text-xs font-bold text-purple-600">
+                        Total Investido / Aplicado: <span class="text-purple-700 font-extrabold">${formatCurrency(subtotalInvestimentos)}</span>
+                    </div>
+                </div>
+                ${contasInvestimentos.length > 0 
+                    ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${contasInvestimentos.map(renderCard).join('')}</div>`
+                    : `<div class="p-5 bg-white rounded-2xl border border-slate-100 text-center text-slate-400 text-xs font-medium">Nenhuma conta de investimento ou poupança cadastrada. Clique em "Nova Conta" para cadastrar.</div>`
+                }
+            </div>
+        `;
+
+        container.innerHTML = html;
     },
 
     updateContasSelects() {
@@ -120,9 +210,25 @@ const contasModule = {
 
             let html = isFilter ? '<option value="">Todas as Contas</option>' : '<option value="">Selecione uma conta</option>';
 
-            this.contas.forEach(c => {
-                html += `<option value="${c.id}">${c.nome} (${formatCurrency(c.saldo)})</option>`;
-            });
+            // Separar opções por grupo no select
+            const correntes = this.contas.filter(c => !isContaInvestimentoOuReserva(c.tipoConta));
+            const investimentos = this.contas.filter(c => isContaInvestimentoOuReserva(c.tipoConta));
+
+            if (correntes.length > 0) {
+                html += `<optgroup label="Contas Correntes & Carteiras">`;
+                correntes.forEach(c => {
+                    html += `<option value="${c.id}">${c.nome} (${formatCurrency(c.saldo)})</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            if (investimentos.length > 0) {
+                html += `<optgroup label="Investimentos & Poupança">`;
+                investimentos.forEach(c => {
+                    html += `<option value="${c.id}">${c.nome} (${formatCurrency(c.saldo)})</option>`;
+                });
+                html += `</optgroup>`;
+            }
 
             select.innerHTML = html;
             if (currentValue) select.value = currentValue;
