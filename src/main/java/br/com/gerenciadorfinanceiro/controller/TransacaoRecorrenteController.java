@@ -1,10 +1,13 @@
 package br.com.gerenciadorfinanceiro.controller;
 
-import br.com.gerenciadorfinanceiro.model.Transacao;
-import br.com.gerenciadorfinanceiro.model.TransacaoRecorrente;
+import br.com.gerenciadorfinanceiro.controller.dto.RecorrenciaRequestDto;
+import br.com.gerenciadorfinanceiro.controller.dto.RecorrenciaResponseDto;
+import br.com.gerenciadorfinanceiro.controller.dto.ResumoRecorrenciasDto;
+import br.com.gerenciadorfinanceiro.controller.dto.TransacaoResponseDto;
 import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.service.TransacaoRecorrenteService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,38 +18,42 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/recorrencias")
+@RequiredArgsConstructor
 public class TransacaoRecorrenteController {
 
-    @Autowired
-    private TransacaoRecorrenteService recorrenteService;
+    private final TransacaoRecorrenteService recorrenteService;
 
     @GetMapping
-    public ResponseEntity<List<TransacaoRecorrente>> listar(@AuthenticationPrincipal Usuario usuario) {
+    public ResponseEntity<List<RecorrenciaResponseDto>> listar(@AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(recorrenteService.listar(usuario.getId()));
     }
 
+    @GetMapping("/resumo")
+    public ResponseEntity<ResumoRecorrenciasDto> obterResumo(@AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(recorrenteService.obterResumo(usuario.getId()));
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<TransacaoRecorrente> buscarPorId(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    public ResponseEntity<RecorrenciaResponseDto> buscarPorId(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(recorrenteService.buscarPorId(id, usuario.getId()));
     }
 
     @PostMapping
-    public ResponseEntity<TransacaoRecorrente> criar(@RequestBody TransacaoRecorrente recorrencia, @AuthenticationPrincipal Usuario usuario) {
-        recorrencia.setUsuario(usuario);
-        return ResponseEntity.ok(recorrenteService.salvar(recorrencia));
+    public ResponseEntity<RecorrenciaResponseDto> criar(@RequestBody @Valid RecorrenciaRequestDto request, @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(recorrenteService.salvar(request, usuario));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<TransacaoRecorrente> atualizar(
+    public ResponseEntity<RecorrenciaResponseDto> atualizar(
             @PathVariable Long id,
-            @RequestBody TransacaoRecorrente dados,
+            @RequestBody @Valid RecorrenciaRequestDto request,
             @AuthenticationPrincipal Usuario usuario) {
 
-        return ResponseEntity.ok(recorrenteService.atualizar(id, dados, usuario.getId()));
+        return ResponseEntity.ok(recorrenteService.atualizar(id, request, usuario.getId()));
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<TransacaoRecorrente> alternarStatus(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    public ResponseEntity<RecorrenciaResponseDto> alternarStatus(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(recorrenteService.alternarStatus(id, usuario.getId()));
     }
 
@@ -57,7 +64,7 @@ public class TransacaoRecorrenteController {
     }
 
     @PostMapping("/{id}/lancar")
-    public ResponseEntity<Transacao> lancarAgora(
+    public ResponseEntity<TransacaoResponseDto> lancarAgora(
             @PathVariable Long id,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
             @AuthenticationPrincipal Usuario usuario) {
@@ -65,7 +72,7 @@ public class TransacaoRecorrenteController {
     }
 
     @PostMapping("/processar")
-    public ResponseEntity<List<Transacao>> processarPendentes(
+    public ResponseEntity<List<TransacaoResponseDto>> processarPendentes(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataReferencia,
             @AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(recorrenteService.processarRecorrenciasUsuario(usuario.getId(), dataReferencia));

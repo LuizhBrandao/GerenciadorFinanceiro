@@ -1,11 +1,11 @@
 package br.com.gerenciadorfinanceiro.controller;
 
-import br.com.gerenciadorfinanceiro.config.DataInitializer;
-import br.com.gerenciadorfinanceiro.exception.EntidadeNaoEncontradaException;
-import br.com.gerenciadorfinanceiro.model.Categoria;
+import br.com.gerenciadorfinanceiro.controller.dto.CategoriaRequestDto;
+import br.com.gerenciadorfinanceiro.controller.dto.CategoriaResponseDto;
 import br.com.gerenciadorfinanceiro.model.Usuario;
-import br.com.gerenciadorfinanceiro.repository.CategoriaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import br.com.gerenciadorfinanceiro.service.CategoriaService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -14,38 +14,33 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/categorias")
+@RequiredArgsConstructor
 public class CategoriaController {
 
-    @Autowired
-    private CategoriaRepository categoriaRepository;
+    private final CategoriaService categoriaService;
 
     @GetMapping
-    public ResponseEntity<List<Categoria>> listar(@AuthenticationPrincipal Usuario usuario) {
-        List<Categoria> categorias = categoriaRepository.findByUsuarioId(usuario.getId());
+    public ResponseEntity<List<CategoriaResponseDto>> listar(@AuthenticationPrincipal Usuario usuario) {
+        List<CategoriaResponseDto> categorias = categoriaService.listar(usuario.getId());
         if (categorias.isEmpty()) {
-            categorias = categoriaRepository.saveAll(DataInitializer.criarCategoriasPadraoParaUsuario(usuario));
+            categorias = categoriaService.inicializarCategoriasPadrao(usuario);
         }
         return ResponseEntity.ok(categorias);
     }
 
     @PostMapping("/inicializar-padrao")
-    public ResponseEntity<List<Categoria>> inicializarPadrao(@AuthenticationPrincipal Usuario usuario) {
-        List<Categoria> padrao = DataInitializer.criarCategoriasPadraoParaUsuario(usuario);
-        return ResponseEntity.ok(categoriaRepository.saveAll(padrao));
+    public ResponseEntity<List<CategoriaResponseDto>> inicializarPadrao(@AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(categoriaService.inicializarCategoriasPadrao(usuario));
     }
 
     @PostMapping
-    public ResponseEntity<Categoria> criar(@RequestBody Categoria categoria, @AuthenticationPrincipal Usuario usuario) {
-        categoria.setUsuario(usuario);
-        return ResponseEntity.ok(categoriaRepository.save(categoria));
+    public ResponseEntity<CategoriaResponseDto> criar(@RequestBody @Valid CategoriaRequestDto request, @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(categoriaService.criar(request, usuario));
     }
 
     @DeleteMapping("/{id}")
-    @SuppressWarnings("null")
     public ResponseEntity<Void> deletar(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
-        Categoria categoria = categoriaRepository.findByIdAndUsuarioId(id, usuario.getId())
-                .orElseThrow(() -> new EntidadeNaoEncontradaException("Categoria não encontrada."));
-        categoriaRepository.delete(categoria);
+        categoriaService.excluir(id, usuario.getId());
         return ResponseEntity.noContent().build();
     }
 }

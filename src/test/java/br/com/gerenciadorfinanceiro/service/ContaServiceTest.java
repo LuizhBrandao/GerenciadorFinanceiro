@@ -5,6 +5,7 @@ import br.com.gerenciadorfinanceiro.model.Conta;
 import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.model.enums.TipoConta;
 import br.com.gerenciadorfinanceiro.repository.ContaRepository;
+import br.com.gerenciadorfinanceiro.service.impl.ContaServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class ContaServiceTest {
     private ContaRepository contaRepository;
 
     @InjectMocks
-    private ContaService contaService;
+    private ContaServiceImpl contaService;
 
     private Usuario usuario;
     private Conta contaCorrente1;

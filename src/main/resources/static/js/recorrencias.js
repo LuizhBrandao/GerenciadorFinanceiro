@@ -1,5 +1,6 @@
 /**
  * Módulo de Transações Recorrentes & Despesas Fixas - Gerenciador Financeiro
+ * Agregações e rotinas de recorrências processadas no servidor Java
  */
 
 const recorrenciasModule = {
@@ -18,10 +19,14 @@ const recorrenciasModule = {
 
     async loadRecorrencias() {
         try {
-            const data = await api.get('/recorrencias');
+            const [data, resumo] = await Promise.all([
+                api.get('/recorrencias').catch(() => []),
+                api.get('/recorrencias/resumo').catch(() => null)
+            ]);
+
             this.recorrencias = data || [];
             this.renderRecorrenciasCards();
-            this.renderResumo();
+            this.renderResumo(resumo);
             this.updateRecorrenciasSelects();
             return this.recorrencias;
         } catch (error) {
@@ -30,22 +35,28 @@ const recorrenciasModule = {
         }
     },
 
-    renderResumo() {
+    renderResumo(resumo) {
         let totalDespesasFixas = 0;
         let totalReceitasRecorrentes = 0;
         let totalAtivas = 0;
 
-        this.recorrencias.forEach(rec => {
-            if (rec.ativo) {
-                totalAtivas++;
-                const valor = parseFloat(rec.valor) || 0;
-                if (rec.tipo === 'DESPESA') {
-                    totalDespesasFixas += valor;
-                } else if (rec.tipo === 'RECEITA') {
-                    totalReceitasRecorrentes += valor;
+        if (resumo) {
+            totalDespesasFixas = parseFloat(resumo.totalDespesasFixas) || 0;
+            totalReceitasRecorrentes = parseFloat(resumo.totalReceitasRecorrentes) || 0;
+            totalAtivas = resumo.totalAtivas || 0;
+        } else {
+            this.recorrencias.forEach(rec => {
+                if (rec.ativo) {
+                    totalAtivas++;
+                    const valor = parseFloat(rec.valor) || 0;
+                    if (rec.tipo === 'DESPESA') {
+                        totalDespesasFixas += valor;
+                    } else if (rec.tipo === 'RECEITA') {
+                        totalReceitasRecorrentes += valor;
+                    }
                 }
-            }
-        });
+            });
+        }
 
         const elDespesas = document.getElementById('rec-total-despesas-fixas');
         const elReceitas = document.getElementById('rec-total-receitas');
@@ -233,8 +244,8 @@ const recorrenciasModule = {
             tipo,
             frequencia,
             diaVencimento,
-            conta: { id: parseInt(contaId) },
-            categoria: { id: parseInt(categoriaId) },
+            contaId: parseInt(contaId),
+            categoriaId: parseInt(categoriaId),
             dataInicio,
             dataFim,
             observacao
@@ -282,7 +293,7 @@ const recorrenciasModule = {
             showToast('Transação lançada com sucesso no histórico!', 'success');
             await this.loadRecorrencias();
             if (window.transacoesModule) {
-                window.transacoesModule.loadTransacoes();
+                await window.transacoesModule.loadTransacoes();
             }
             if (window.dashboardModule) {
                 window.dashboardModule.loadSummary();

@@ -1,9 +1,11 @@
 /**
  * Módulo de Gestão de Contas - Gerenciador Financeiro
+ * Cálculos e segregação de saldos operacional vs investimentos processados no servidor Java
  */
 
 const contasModule = {
     contas: [],
+    resumoContas: null,
 
     init() {
         this.bindEvents();
@@ -24,14 +26,23 @@ const contasModule = {
 
     async loadContas() {
         try {
-            const [contasData, resumoData] = await Promise.all([
-                api.get('/contas').catch(() => []),
-                api.get('/contas/resumo').catch(() => null)
-            ]);
+            const resumoCompleto = await api.get('/contas/resumo-completo').catch(() => null);
 
-            this.contas = contasData || [];
-            this.updateResumoSaldos(resumoData);
-            this.renderContasCards();
+            if (resumoCompleto) {
+                this.resumoContas = resumoCompleto;
+                this.contas = [...(resumoCompleto.contasCorrentes || []), ...(resumoCompleto.contasInvestimentos || [])];
+                this.updateResumoSaldos(resumoCompleto.resumoSaldos);
+                this.renderContasCardsFromResumo(resumoCompleto);
+            } else {
+                const [contasData, resumoData] = await Promise.all([
+                    api.get('/contas').catch(() => []),
+                    api.get('/contas/resumo').catch(() => null)
+                ]);
+                this.contas = contasData || [];
+                this.updateResumoSaldos(resumoData);
+                this.renderContasCardsFallback();
+            }
+
             this.updateContasSelects();
             return this.contas;
         } catch (error) {
@@ -41,25 +52,9 @@ const contasModule = {
     },
 
     updateResumoSaldos(resumo) {
-        let saldoCorrentes = 0;
-        let saldoInvestimentos = 0;
-        let patrimonioTotal = 0;
-
-        if (resumo) {
-            saldoCorrentes = parseFloat(resumo.saldoContasCorrentes) || 0;
-            saldoInvestimentos = parseFloat(resumo.saldoInvestimentos) || 0;
-            patrimonioTotal = parseFloat(resumo.patrimonioTotal) || 0;
-        } else {
-            this.contas.forEach(c => {
-                const s = parseFloat(c.saldo) || 0;
-                if (isContaInvestimentoOuReserva(c.tipoConta)) {
-                    saldoInvestimentos += s;
-                } else {
-                    saldoCorrentes += s;
-                }
-            });
-            patrimonioTotal = saldoCorrentes + saldoInvestimentos;
-        }
+        const saldoCorrentes = resumo ? (parseFloat(resumo.saldoContasCorrentes) || 0) : 0;
+        const saldoInvestimentos = resumo ? (parseFloat(resumo.saldoInvestimentos) || 0) : 0;
+        const patrimonioTotal = resumo ? (parseFloat(resumo.patrimonioTotal) || 0) : (saldoCorrentes + saldoInvestimentos);
 
         const elResumoCorrente = document.getElementById('contas-resumo-corrente');
         const elResumoInvestimento = document.getElementById('contas-resumo-investimento');
@@ -74,11 +69,64 @@ const contasModule = {
         if (elHeaderInvestimentos) elHeaderInvestimentos.textContent = formatCurrency(saldoInvestimentos);
     },
 
-    renderContasCards() {
+    renderContaCardHtml(conta) {
+        const tipoIcons = {
+            'CORRENTE': 'fa-credit-card text-blue-500 bg-blue-50',
+            'POUPANCA': 'fa-piggy-bank text-purple-500 bg-purple-50',
+            'INVESTIMENTO': 'fa-chart-line text-purple-500 bg-purple-50',
+            'CARTEIRA': 'fa-wallet text-amber-500 bg-amber-50'
+        };
+
+        const iconClass = tipoIcons[conta.tipoConta] || 'fa-university text-indigo-500 bg-indigo-50';
+        const saldoVal = parseFloat(conta.saldo) || 0;
+        const saldoColor = (saldoVal >= 0) ? 'text-slate-800' : 'text-rose-600';
+
+        return `
+            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover-card relative overflow-hidden flex flex-col justify-between">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl flex items-center justify-center text-lg ${iconClass}">
+                            <i class="fas ${iconClass.split(' ')[0]}"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base leading-tight">${conta.nome}</h3>
+                            <p class="text-xs text-slate-400 font-medium">${conta.instituicaoFinanceira || 'Instituição não informada'}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="contasModule.verExtrato(${conta.id})" title="Ver Extrato" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                            <i class="fas fa-receipt text-xs"></i>
+                        </button>
+                        <button onclick="contasModule.openEditContaModal(${conta.id})" title="Editar Conta" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                            <i class="fas fa-edit text-xs"></i>
+                        </button>
+                        <button onclick="contasModule.excluirConta(${conta.id}, '${conta.nome}')" title="Excluir Conta" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                        <span>Saldo Atual</span>
+                        <span class="font-semibold text-slate-500">${formatTipoConta(conta.tipoConta)}</span>
+                    </div>
+                    <div class="text-2xl font-black ${saldoColor} tracking-tight">
+                        ${formatCurrency(conta.saldo)}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderContasCardsFromResumo(resumoCompleto) {
         const container = document.getElementById('contas-list-container');
         if (!container) return;
 
-        if (this.contas.length === 0) {
+        const correntes = resumoCompleto.contasCorrentes || [];
+        const investimentos = resumoCompleto.contasInvestimentos || [];
+
+        if (correntes.length === 0 && investimentos.length === 0) {
             container.innerHTML = `
                 <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
                     <div class="w-16 h-16 mx-auto mb-4 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-2xl">
@@ -94,61 +142,8 @@ const contasModule = {
             return;
         }
 
-        const tipoIcons = {
-            'CORRENTE': 'fa-credit-card text-blue-500 bg-blue-50',
-            'POUPANCA': 'fa-piggy-bank text-purple-500 bg-purple-50',
-            'INVESTIMENTO': 'fa-chart-line text-purple-500 bg-purple-50',
-            'CARTEIRA': 'fa-wallet text-amber-500 bg-amber-50'
-        };
-
-        const renderCard = (conta) => {
-            const iconClass = tipoIcons[conta.tipoConta] || 'fa-university text-indigo-500 bg-indigo-50';
-            const saldoColor = (conta.saldo >= 0) ? 'text-slate-800' : 'text-rose-600';
-
-            return `
-                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover-card relative overflow-hidden flex flex-col justify-between">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-11 h-11 rounded-xl flex items-center justify-center text-lg ${iconClass}">
-                                <i class="fas ${iconClass.split(' ')[0]}"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-slate-800 text-base leading-tight">${conta.nome}</h3>
-                                <p class="text-xs text-slate-400 font-medium">${conta.instituicaoFinanceira || 'Instituição não informada'}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <button onclick="contasModule.verExtrato(${conta.id})" title="Ver Extrato" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                                <i class="fas fa-receipt text-xs"></i>
-                            </button>
-                            <button onclick="contasModule.openEditContaModal(${conta.id})" title="Editar Conta" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
-                                <i class="fas fa-edit text-xs"></i>
-                            </button>
-                            <button onclick="contasModule.excluirConta(${conta.id}, '${conta.nome}')" title="Excluir Conta" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
-                                <i class="fas fa-trash text-xs"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
-                            <span>Saldo Atual</span>
-                            <span class="font-semibold text-slate-500">${formatTipoConta(conta.tipoConta)}</span>
-                        </div>
-                        <div class="text-2xl font-black ${saldoColor} tracking-tight">
-                            ${formatCurrency(conta.saldo)}
-                        </div>
-                    </div>
-                </div>
-            `;
-        };
-
-        // Separar contas em 2 contextos financeiros
-        const contasCorrentes = this.contas.filter(c => !isContaInvestimentoOuReserva(c.tipoConta));
-        const contasInvestimentos = this.contas.filter(c => isContaInvestimentoOuReserva(c.tipoConta));
-
-        const subtotalCorrentes = contasCorrentes.reduce((acc, c) => acc + (parseFloat(c.saldo) || 0), 0);
-        const subtotalInvestimentos = contasInvestimentos.reduce((acc, c) => acc + (parseFloat(c.saldo) || 0), 0);
+        const subtotalCorrentes = parseFloat(resumoCompleto.subtotalCorrentes) || 0;
+        const subtotalInvestimentos = parseFloat(resumoCompleto.subtotalInvestimentos) || 0;
 
         let html = '';
 
@@ -159,14 +154,14 @@ const contasModule = {
                     <div class="flex items-center gap-2">
                         <span class="w-3 h-3 rounded-full bg-blue-500"></span>
                         <h3 class="text-base font-extrabold text-slate-800 tracking-tight">Contas Correntes & Carteiras (Caixa Operacional)</h3>
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${contasCorrentes.length}</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${correntes.length}</span>
                     </div>
                     <div class="text-xs font-bold text-slate-500">
                         Subtotal Disponível: <span class="text-slate-800 font-extrabold">${formatCurrency(subtotalCorrentes)}</span>
                     </div>
                 </div>
-                ${contasCorrentes.length > 0 
-                    ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${contasCorrentes.map(renderCard).join('')}</div>`
+                ${correntes.length > 0 
+                    ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${correntes.map(c => this.renderContaCardHtml(c)).join('')}</div>`
                     : `<div class="p-5 bg-white rounded-2xl border border-slate-100 text-center text-slate-400 text-xs font-medium">Nenhuma conta corrente ou carteira cadastrada.</div>`
                 }
             </div>
@@ -179,20 +174,34 @@ const contasModule = {
                     <div class="flex items-center gap-2">
                         <span class="w-3 h-3 rounded-full bg-purple-500"></span>
                         <h3 class="text-base font-extrabold text-slate-800 tracking-tight">Investimentos & Poupança (Patrimônio & Reservas)</h3>
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">${contasInvestimentos.length}</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">${investimentos.length}</span>
                     </div>
                     <div class="text-xs font-bold text-purple-600">
                         Total Investido / Aplicado: <span class="text-purple-700 font-extrabold">${formatCurrency(subtotalInvestimentos)}</span>
                     </div>
                 </div>
-                ${contasInvestimentos.length > 0 
-                    ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${contasInvestimentos.map(renderCard).join('')}</div>`
+                ${investimentos.length > 0 
+                    ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${investimentos.map(c => this.renderContaCardHtml(c)).join('')}</div>`
                     : `<div class="p-5 bg-white rounded-2xl border border-slate-100 text-center text-slate-400 text-xs font-medium">Nenhuma conta de investimento ou poupança cadastrada. Clique em "Nova Conta" para cadastrar.</div>`
                 }
             </div>
         `;
 
         container.innerHTML = html;
+    },
+
+    renderContasCardsFallback() {
+        const correntes = this.contas.filter(c => !isContaInvestimentoOuReserva(c.tipoConta));
+        const investimentos = this.contas.filter(c => isContaInvestimentoOuReserva(c.tipoConta));
+        const subtotalCorrentes = correntes.reduce((acc, c) => acc + (parseFloat(c.saldo) || 0), 0);
+        const subtotalInvestimentos = investimentos.reduce((acc, c) => acc + (parseFloat(c.saldo) || 0), 0);
+
+        this.renderContasCardsFromResumo({
+            contasCorrentes: correntes,
+            contasInvestimentos: investimentos,
+            subtotalCorrentes,
+            subtotalInvestimentos
+        });
     },
 
     updateContasSelects() {
@@ -210,7 +219,6 @@ const contasModule = {
 
             let html = isFilter ? '<option value="">Todas as Contas</option>' : '<option value="">Selecione uma conta</option>';
 
-            // Separar opções por grupo no select
             const correntes = this.contas.filter(c => !isContaInvestimentoOuReserva(c.tipoConta));
             const investimentos = this.contas.filter(c => isContaInvestimentoOuReserva(c.tipoConta));
 
@@ -252,7 +260,7 @@ const contasModule = {
         document.getElementById('conta-nome').value = conta.nome;
         document.getElementById('conta-instituicao').value = conta.instituicaoFinanceira || '';
         document.getElementById('conta-tipo').value = conta.tipoConta;
-        document.getElementById('conta-saldo-group').classList.add('hidden'); // saldo inicial não é editável diretamente aqui
+        document.getElementById('conta-saldo-group').classList.add('hidden');
         document.getElementById('modal-conta-title').textContent = 'Editar Conta';
 
         openModal('modal-conta');
@@ -273,7 +281,6 @@ const contasModule = {
 
         try {
             if (id) {
-                // Atualizar conta existente
                 await api.put(`/contas/${id}`, {
                     nome,
                     instituicaoFinanceira,
@@ -281,7 +288,6 @@ const contasModule = {
                 });
                 showToast('Conta atualizada com sucesso!', 'success');
             } else {
-                // Criar nova conta
                 await api.post('/contas', {
                     nome,
                     instituicaoFinanceira,
@@ -344,7 +350,11 @@ const contasModule = {
         }
 
         try {
-            await api.post(`/contas/transferir?origem=${origem}&destino=${destino}&valor=${valor}`);
+            await api.post('/contas/transferir', {
+                contaOrigemId: parseInt(origem),
+                contaDestinoId: parseInt(destino),
+                valor
+            });
             showToast('Transferência realizada com sucesso!', 'success');
             closeModal('modal-transferencia');
             await this.loadContas();
@@ -387,6 +397,7 @@ const contasModule = {
                         const valorFormatted = `${isReceita ? '+' : '-'} ${formatCurrency(t.valor)}`;
                         const colorClass = isReceita ? 'text-emerald-600' : 'text-rose-600';
                         const iconClass = isReceita ? 'fa-arrow-down text-emerald-500 bg-emerald-50' : 'fa-arrow-up text-rose-500 bg-rose-50';
+                        const catNome = t.categoria ? t.categoria.nome : 'Geral';
 
                         return `
                             <div class="py-3 flex items-center justify-between gap-4">
@@ -396,12 +407,12 @@ const contasModule = {
                                     </div>
                                     <div>
                                         <p class="text-sm font-semibold text-slate-800">${t.descricao}</p>
-                                        <p class="text-xs text-slate-400">${formatDate(t.dataTransacao)} • ${t.categoria ? t.categoria.nome : 'Geral'}</p>
+                                        <p class="text-xs text-slate-400">${formatDate(t.dataTransacao)} • ${catNome}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-bold ${colorClass}">${valorFormatted}</p>
-                                    <span class="badge badge-status-${t.status.toLowerCase()}">${formatStatusTransacao(t.status)}</span>
+                                    <span class="badge badge-status-${(t.status || '').toLowerCase()}">${formatStatusTransacao(t.status)}</span>
                                 </div>
                             </div>
                         `;

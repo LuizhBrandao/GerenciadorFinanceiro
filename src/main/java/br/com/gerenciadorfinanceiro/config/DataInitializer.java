@@ -12,7 +12,7 @@ import br.com.gerenciadorfinanceiro.repository.CategoriaRepository;
 import br.com.gerenciadorfinanceiro.repository.ContaRepository;
 import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -22,22 +22,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private CategoriaRepository categoriaRepository;
-
-    @Autowired
-    private ContaRepository contaRepository;
-
-    @Autowired
-    private TransacaoRepository transacaoRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UsuarioRepository usuarioRepository;
+    private final CategoriaRepository categoriaRepository;
+    private final ContaRepository contaRepository;
+    private final TransacaoRepository transacaoRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
@@ -50,7 +42,7 @@ public class DataInitializer implements CommandLineRunner {
             demoUser.setPreferencias(pref);
             demoUser = usuarioRepository.save(demoUser);
 
-            // 2. Criar as 10 Categorias Essenciais
+            // 2. Criar as Categorias Essenciais
             List<Categoria> categoriasPadrao = criarCategoriasPadraoParaUsuario(demoUser);
             categoriaRepository.saveAll(categoriasPadrao);
 
@@ -85,15 +77,12 @@ public class DataInitializer implements CommandLineRunner {
 
     public static List<Categoria> criarCategoriasPadraoParaUsuario(Usuario usuario) {
         return List.of(
-                // 3 Categorias de Receitas
                 new Categoria(usuario, "Salário e Remuneração", TipoTransacao.RECEITA,
                         "Salário fixo mensal, adiantamentos, 13º salário e benefícios em folha.", "fa-briefcase"),
                 new Categoria(usuario, "Rendimentos & Investimentos", TipoTransacao.RECEITA,
                         "Dividendos, juros sobre capital próprio (JCP), rendimentos de CDI/Poupança e fundos imobiliários.", "fa-chart-line"),
                 new Categoria(usuario, "Freelance & Serviços Extras", TipoTransacao.RECEITA,
                         "Trabalhos autônomos, consultorias, projetos paralelos e vendas pontuais.", "fa-laptop"),
-
-                // 7 Categorias de Despesas
                 new Categoria(usuario, "Moradia & Habitação", TipoTransacao.DESPESA,
                         "Aluguel, condomínio, IPTU, contas essenciais (energia elétrica, água, gás, internet).", "fa-house"),
                 new Categoria(usuario, "Alimentação & Supermercado", TipoTransacao.DESPESA,

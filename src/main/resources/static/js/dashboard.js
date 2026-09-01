@@ -1,5 +1,6 @@
 /**
  * Módulo do Dashboard - Gerenciador Financeiro
+ * Processamento e agregações matemáticas 100% executadas no servidor Java (Spring Boot)
  */
 
 const dashboardModule = {
@@ -7,80 +8,30 @@ const dashboardModule = {
     evolutionChartInstance: null,
 
     init() {
-        // Inicialização de ouvintes se necessário
+        // Inicialização do módulo
     },
 
     async loadSummary() {
         try {
-            // Carregar resumo consolidado de saldos, contas e transações em paralelo
-            const [resumoSaldos, contas, transacoes] = await Promise.all([
-                api.get('/contas/resumo').catch(() => null),
-                api.get('/contas').catch(() => []),
-                api.get('/transacoes').catch(() => [])
-            ]);
+            // Chamada única ao endpoint de consolidação no Java
+            const data = await api.get('/dashboard');
+            if (!data) return;
 
-            this.renderMetricCards(resumoSaldos, contas, transacoes);
-            this.renderRecentTransactions(transacoes);
-            this.renderCharts(transacoes);
+            this.renderMetricCards(data.saldos, data.metricasMes);
+            this.renderRecentTransactions(data.transacoesRecentes || []);
+            this.renderCharts(data.despesasPorCategoria || [], data.evolucaoMensal || {});
         } catch (error) {
             console.error('Erro ao carregar dados do dashboard:', error);
         }
     },
 
-    renderMetricCards(resumoSaldos, contas, transacoes) {
-        // Obter valores de contas correntes e investimentos
-        let saldoCorrentes = 0;
-        let saldoInvestimentos = 0;
+    renderMetricCards(saldos, metricas) {
+        const saldoCorrentes = saldos ? (parseFloat(saldos.saldoContasCorrentes) || 0) : 0;
+        const saldoInvestimentos = saldos ? (parseFloat(saldos.saldoInvestimentos) || 0) : 0;
 
-        if (resumoSaldos) {
-            saldoCorrentes = parseFloat(resumoSaldos.saldoContasCorrentes) || 0;
-            saldoInvestimentos = parseFloat(resumoSaldos.saldoInvestimentos) || 0;
-        } else if (Array.isArray(contas)) {
-            contas.forEach(c => {
-                const s = parseFloat(c.saldo) || 0;
-                if (isContaInvestimentoOuReserva(c.tipoConta)) {
-                    saldoInvestimentos += s;
-                } else {
-                    saldoCorrentes += s;
-                }
-            });
-        }
-
-        // Calcular totais de receitas e despesas efetuadas (PAGAS)
-        let totalReceitas = 0;
-        let totalDespesas = 0;
-
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-
-        let receitasMes = 0;
-        let despesasMes = 0;
-        let receitasPendentes = 0;
-        let despesasPendentes = 0;
-
-        transacoes.forEach(t => {
-            const valor = parseFloat(t.valor) || 0;
-            const data = new Date(t.dataTransacao);
-            const isCurrentMonth = (data.getMonth() === currentMonth && data.getFullYear() === currentYear);
-
-            if (t.tipo === 'RECEITA') {
-                if (t.status === 'PAGA') {
-                    totalReceitas += valor;
-                    if (isCurrentMonth) receitasMes += valor;
-                } else if (t.status === 'PENDENTE' && isCurrentMonth) {
-                    receitasPendentes += valor;
-                }
-            } else if (t.tipo === 'DESPESA') {
-                if (t.status === 'PAGA') {
-                    totalDespesas += valor;
-                    if (isCurrentMonth) despesasMes += valor;
-                } else if (t.status === 'PENDENTE' && isCurrentMonth) {
-                    despesasPendentes += valor;
-                }
-            }
-        });
-
-        const saldoMes = receitasMes - despesasMes;
+        const receitasMes = metricas ? (parseFloat(metricas.receitasMes) || 0) : 0;
+        const despesasMes = metricas ? (parseFloat(metricas.despesasMes) || 0) : 0;
+        const balancoMes = metricas ? (parseFloat(metricas.balancoMes) || 0) : 0;
 
         // Atualizar elementos no DOM
         const elSaldoConsolidado = document.getElementById('dash-saldo-consolidado');
@@ -97,18 +48,18 @@ const dashboardModule = {
         if (elHeaderInvestimentos) elHeaderInvestimentos.textContent = formatCurrency(saldoInvestimentos);
         if (elReceitasMes) elReceitasMes.textContent = formatCurrency(receitasMes);
         if (elDespesasMes) elDespesasMes.textContent = formatCurrency(despesasMes);
-        
+
         if (elBalancoMes) {
-            elBalancoMes.textContent = formatCurrency(saldoMes);
-            elBalancoMes.className = `text-2xl font-black ${saldoMes >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+            elBalancoMes.textContent = formatCurrency(balancoMes);
+            elBalancoMes.className = `text-2xl font-black ${balancoMes >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
         }
     },
 
-    renderRecentTransactions(transacoes) {
+    renderRecentTransactions(recentes) {
         const container = document.getElementById('dash-recentes-container');
         if (!container) return;
 
-        if (transacoes.length === 0) {
+        if (recentes.length === 0) {
             container.innerHTML = `
                 <tr>
                     <td colspan="5" class="py-8 text-center text-slate-400 text-sm">
@@ -119,16 +70,11 @@ const dashboardModule = {
             return;
         }
 
-        // 5 transações mais recentes
-        const recentes = [...transacoes]
-            .sort((a, b) => new Date(b.dataTransacao) - new Date(a.dataTransacao))
-            .slice(0, 5);
-
         container.innerHTML = recentes.map(t => {
             const isReceita = t.tipo === 'RECEITA';
             const colorClass = isReceita ? 'text-emerald-600' : 'text-rose-600';
             const sinal = isReceita ? '+' : '-';
-            const icon = t.categoria ? (t.categoria.icone || 'fa-tag') : 'fa-tag';
+            const icon = t.categoriaIcone || 'fa-tag';
 
             return `
                 <tr class="hover:bg-slate-50/60 transition-colors border-b border-slate-100 last:border-0">
@@ -144,10 +90,10 @@ const dashboardModule = {
                         </div>
                     </td>
                     <td class="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                        ${t.conta ? t.conta.nome : '-'}
+                        ${t.contaNome || '-'}
                     </td>
                     <td class="py-3 px-4 whitespace-nowrap">
-                        <span class="badge badge-status-${t.status.toLowerCase()}">${formatStatusTransacao(t.status)}</span>
+                        <span class="badge badge-status-${(t.status || '').toLowerCase()}">${formatStatusTransacao(t.status)}</span>
                     </td>
                     <td class="py-3 px-4 text-right font-bold text-xs ${colorClass} whitespace-nowrap">
                         ${sinal} ${formatCurrency(t.valor)}
@@ -157,24 +103,17 @@ const dashboardModule = {
         }).join('');
     },
 
-    renderCharts(transacoes) {
-        this.renderCategoryExpensesChart(transacoes);
-        this.renderFinancialEvolutionChart(transacoes);
+    renderCharts(despesasPorCategoria, evolucaoMensal) {
+        this.renderCategoryExpensesChart(despesasPorCategoria);
+        this.renderFinancialEvolutionChart(evolucaoMensal);
     },
 
-    renderCategoryExpensesChart(transacoes) {
+    renderCategoryExpensesChart(categorias) {
         const ctx = document.getElementById('chart-categorias');
         if (!ctx) return;
 
-        // Agrupar despesas efetuadas (PAGAS) por categoria
-        const despesasPorCategoria = {};
-        transacoes.filter(t => t.tipo === 'DESPESA' && t.status === 'PAGA').forEach(t => {
-            const catName = t.categoria ? t.categoria.nome : 'Outras';
-            despesasPorCategoria[catName] = (despesasPorCategoria[catName] || 0) + parseFloat(t.valor || 0);
-        });
-
-        const labels = Object.keys(despesasPorCategoria);
-        const data = Object.values(despesasPorCategoria);
+        const labels = categorias.map(c => c.nome);
+        const data = categorias.map(c => parseFloat(c.total) || 0);
 
         if (this.categoryChartInstance) {
             this.categoryChartInstance.destroy();
@@ -243,37 +182,13 @@ const dashboardModule = {
         });
     },
 
-    renderFinancialEvolutionChart(transacoes) {
+    renderFinancialEvolutionChart(evolucao) {
         const ctx = document.getElementById('chart-evolucao');
         if (!ctx) return;
 
-        // Agrupar por últimos 6 meses
-        const monthsNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        const today = new Date();
-        const labels = [];
-        const receitasData = [];
-        const despesasData = [];
-
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            const m = d.getMonth();
-            const y = d.getFullYear();
-            labels.push(`${monthsNames[m]}/${String(y).slice(2)}`);
-
-            let rec = 0;
-            let desp = 0;
-
-            transacoes.filter(t => t.status === 'PAGA').forEach(t => {
-                const tDate = new Date(t.dataTransacao);
-                if (tDate.getMonth() === m && tDate.getFullYear() === y) {
-                    if (t.tipo === 'RECEITA') rec += parseFloat(t.valor || 0);
-                    if (t.tipo === 'DESPESA') desp += parseFloat(t.valor || 0);
-                }
-            });
-
-            receitasData.push(rec);
-            despesasData.push(desp);
-        }
+        const labels = evolucao.labels || [];
+        const receitasData = (evolucao.receitas || []).map(v => parseFloat(v) || 0);
+        const despesasData = (evolucao.despesas || []).map(v => parseFloat(v) || 0);
 
         if (this.evolutionChartInstance) {
             this.evolutionChartInstance.destroy();
@@ -308,7 +223,7 @@ const dashboardModule = {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function(value) {
+                            callback: function (value) {
                                 return 'R$ ' + value;
                             }
                         }

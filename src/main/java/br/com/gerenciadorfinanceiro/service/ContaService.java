@@ -1,106 +1,41 @@
 package br.com.gerenciadorfinanceiro.service;
 
+import br.com.gerenciadorfinanceiro.controller.dto.ContaRequestDto;
+import br.com.gerenciadorfinanceiro.controller.dto.ContaResponseDto;
+import br.com.gerenciadorfinanceiro.controller.dto.ResumoContasResponseDto;
 import br.com.gerenciadorfinanceiro.controller.dto.ResumoSaldosDto;
-import br.com.gerenciadorfinanceiro.exception.EntidadeNaoEncontradaException;
+import br.com.gerenciadorfinanceiro.controller.dto.TransacaoResponseDto;
 import br.com.gerenciadorfinanceiro.model.Conta;
-import br.com.gerenciadorfinanceiro.model.Transacao;
-import br.com.gerenciadorfinanceiro.repository.ContaRepository;
-import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import br.com.gerenciadorfinanceiro.model.Usuario;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-@Service
-public class ContaService {
+public interface ContaService {
 
-    @Autowired
-    private ContaRepository contaRepository;
+    List<ContaResponseDto> listarContas(Long usuarioId);
 
-    @Autowired
-    private TransacaoRepository transacaoRepository;
+    ContaResponseDto buscarPorId(Long id, Long usuarioId);
 
-    public List<Conta> listarContas(Long usuarioId) {
-        return contaRepository.findByUsuarioId(usuarioId);
-    }
+    Conta buscarEntidadePorId(Long id, Long usuarioId);
 
-    public Conta buscarPorId(Long id, Long usuarioId) {
-        return contaRepository.findByIdAndUsuarioId(id, usuarioId)
-                .orElseThrow(() -> new EntidadeNaoEncontradaException("Conta não encontrada ou não pertence ao usuário."));
-    }
+    ContaResponseDto criar(ContaRequestDto request, Usuario usuario);
 
-    @SuppressWarnings("null")
-    public Conta salvar(Conta conta) {
-        return contaRepository.save(conta);
-    }
+    ContaResponseDto atualizar(Long id, ContaRequestDto request, Long usuarioId);
 
-    @SuppressWarnings("null")
-    public void excluir(Long id, Long usuarioId) {
-        Conta conta = buscarPorId(id, usuarioId);
-        contaRepository.delete(conta);
-    }
+    void excluir(Long id, Long usuarioId);
 
-    @SuppressWarnings("null")
-    public BigDecimal calcularSaldoConsolidado(Long usuarioId) {
-        // Saldo consolidado refere-se às contas correntes e de giro (excluindo investimentos e poupança)
-        return listarContas(usuarioId).stream()
-                .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
-                .filter(c -> c.getTipoConta() != null && !c.getTipoConta().isInvestimentoOuReserva())
-                .map(Conta::getSaldo)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
+    BigDecimal calcularSaldoConsolidado(Long usuarioId);
 
-    @SuppressWarnings("null")
-    public BigDecimal calcularSaldoInvestimentos(Long usuarioId) {
-        // Total alocado em investimentos e poupança / reserva
-        return listarContas(usuarioId).stream()
-                .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
-                .filter(c -> c.getTipoConta() != null && c.getTipoConta().isInvestimentoOuReserva())
-                .map(Conta::getSaldo)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
+    BigDecimal calcularSaldoInvestimentos(Long usuarioId);
 
-    @SuppressWarnings("null")
-    public BigDecimal calcularPatrimonioTotal(Long usuarioId) {
-        // Patrimônio líquido total somando contas correntes + investimentos e poupança
-        return listarContas(usuarioId).stream()
-                .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
-                .map(Conta::getSaldo)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
+    BigDecimal calcularPatrimonioTotal(Long usuarioId);
 
-    @SuppressWarnings("null")
-    public ResumoSaldosDto obterResumoSaldos(Long usuarioId) {
-        List<Conta> contasAtivas = listarContas(usuarioId).stream()
-                .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
-                .toList();
+    ResumoSaldosDto obterResumoSaldos(Long usuarioId);
 
-        BigDecimal saldoCorrentes = contasAtivas.stream()
-                .filter(c -> c.getTipoConta() != null && !c.getTipoConta().isInvestimentoOuReserva())
-                .map(Conta::getSaldo)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    ResumoContasResponseDto obterResumoContas(Long usuarioId);
 
-        BigDecimal saldoInvestimentos = contasAtivas.stream()
-                .filter(c -> c.getTipoConta() != null && c.getTipoConta().isInvestimentoOuReserva())
-                .map(Conta::getSaldo)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    List<TransacaoResponseDto> obterExtratoDetalhado(Long contaId, Long usuarioId);
 
-        BigDecimal patrimonioTotal = saldoCorrentes.add(saldoInvestimentos);
-
-        long totalCorrentes = contasAtivas.stream()
-                .filter(c -> c.getTipoConta() != null && !c.getTipoConta().isInvestimentoOuReserva())
-                .count();
-
-        long totalInvestimentos = contasAtivas.stream()
-                .filter(c -> c.getTipoConta() != null && c.getTipoConta().isInvestimentoOuReserva())
-                .count();
-
-        return new ResumoSaldosDto(saldoCorrentes, saldoInvestimentos, patrimonioTotal, totalCorrentes, totalInvestimentos);
-    }
-
-    public List<Transacao> obterExtratoDetalhado(Long contaId, Long usuarioId) {
-        Conta conta = buscarPorId(contaId, usuarioId);
-        return transacaoRepository.findByContaIdAndUsuarioId(conta.getId(), usuarioId);
-    }
+    Conta salvarEntidade(Conta conta);
 }

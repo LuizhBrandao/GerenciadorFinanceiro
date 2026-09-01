@@ -1,12 +1,16 @@
 package br.com.gerenciadorfinanceiro.controller;
 
+import br.com.gerenciadorfinanceiro.controller.dto.ContaRequestDto;
+import br.com.gerenciadorfinanceiro.controller.dto.ContaResponseDto;
+import br.com.gerenciadorfinanceiro.controller.dto.ResumoContasResponseDto;
 import br.com.gerenciadorfinanceiro.controller.dto.ResumoSaldosDto;
-import br.com.gerenciadorfinanceiro.model.Conta;
-import br.com.gerenciadorfinanceiro.model.Transacao;
+import br.com.gerenciadorfinanceiro.controller.dto.TransacaoResponseDto;
+import br.com.gerenciadorfinanceiro.controller.dto.TransferenciaRequestDto;
 import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.service.ContaService;
 import br.com.gerenciadorfinanceiro.service.TransferenciaService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -16,21 +20,19 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/contas")
+@RequiredArgsConstructor
 public class ContaController {
 
-    @Autowired
-    private ContaService contaService;
-
-    @Autowired
-    private TransferenciaService transferenciaService;
+    private final ContaService contaService;
+    private final TransferenciaService transferenciaService;
 
     @GetMapping
-    public ResponseEntity<List<Conta>> listar(@AuthenticationPrincipal Usuario usuario) {
+    public ResponseEntity<List<ContaResponseDto>> listar(@AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(contaService.listarContas(usuario.getId()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Conta> buscarPorId(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    public ResponseEntity<ContaResponseDto> buscarPorId(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(contaService.buscarPorId(id, usuario.getId()));
     }
 
@@ -54,24 +56,24 @@ public class ContaController {
         return ResponseEntity.ok(contaService.obterResumoSaldos(usuario.getId()));
     }
 
+    @GetMapping("/resumo-completo")
+    public ResponseEntity<ResumoContasResponseDto> obterResumoCompleto(@AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(contaService.obterResumoContas(usuario.getId()));
+    }
+
     @GetMapping("/{id}/extrato")
-    public ResponseEntity<List<Transacao>> extrato(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    public ResponseEntity<List<TransacaoResponseDto>> extrato(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(contaService.obterExtratoDetalhado(id, usuario.getId()));
     }
 
     @PostMapping
-    public ResponseEntity<Conta> criar(@RequestBody Conta conta, @AuthenticationPrincipal Usuario usuario) {
-        conta.setUsuario(usuario);
-        return ResponseEntity.ok(contaService.salvar(conta));
+    public ResponseEntity<ContaResponseDto> criar(@RequestBody @Valid ContaRequestDto request, @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(contaService.criar(request, usuario));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Conta> atualizar(@PathVariable Long id, @RequestBody Conta conta, @AuthenticationPrincipal Usuario usuario) {
-        Conta existente = contaService.buscarPorId(id, usuario.getId());
-        existente.setNome(conta.getNome());
-        existente.setInstituicaoFinanceira(conta.getInstituicaoFinanceira());
-        existente.setTipoConta(conta.getTipoConta());
-        return ResponseEntity.ok(contaService.salvar(existente));
+    public ResponseEntity<ContaResponseDto> atualizar(@PathVariable Long id, @RequestBody @Valid ContaRequestDto request, @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(contaService.atualizar(id, request, usuario.getId()));
     }
 
     @DeleteMapping("/{id}")
@@ -82,11 +84,19 @@ public class ContaController {
 
     @PostMapping("/transferir")
     public ResponseEntity<Void> transferir(
-            @RequestParam Long origem,
-            @RequestParam Long destino,
-            @RequestParam BigDecimal valor,
+            @RequestParam(required = false) Long origem,
+            @RequestParam(required = false) Long destino,
+            @RequestParam(required = false) BigDecimal valor,
+            @RequestBody(required = false) TransferenciaRequestDto body,
             @AuthenticationPrincipal Usuario usuario) {
-        transferenciaService.transferir(usuario.getId(), origem, destino, valor);
+
+        if (body != null) {
+            transferenciaService.transferir(usuario.getId(), body);
+        } else if (origem != null && destino != null && valor != null) {
+            transferenciaService.transferir(usuario.getId(), origem, destino, valor);
+        } else {
+            throw new IllegalArgumentException("Parâmetros de transferência incompletos.");
+        }
         return ResponseEntity.ok().build();
     }
 }

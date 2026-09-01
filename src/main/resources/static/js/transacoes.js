@@ -208,7 +208,7 @@ const transacoesModule = {
                         <span class="badge ${badgeTipo}">${formatTipoTransacao(t.tipo)}</span>
                     </td>
                     <td class="px-5 py-3.5 whitespace-nowrap">
-                        <span class="badge badge-status-${t.status.toLowerCase()}">${formatStatusTransacao(t.status)}</span>
+                        <span class="badge badge-status-${(t.status || '').toLowerCase()}">${formatStatusTransacao(t.status)}</span>
                     </td>
                     <td class="px-5 py-3.5 whitespace-nowrap text-right font-bold text-sm ${colorClass}">
                         ${sinal} ${formatCurrency(t.valor)}
@@ -340,8 +340,8 @@ const transacoesModule = {
                     tipo,
                     status,
                     dataTransacao,
-                    conta: { id: parseInt(contaId) },
-                    categoria: { id: parseInt(categoriaId) },
+                    contaId: parseInt(contaId),
+                    categoriaId: parseInt(categoriaId),
                     observacao
                 };
                 await api.put(`/transacoes/${id}`, payload);
@@ -354,23 +354,22 @@ const transacoesModule = {
                     tipo,
                     status,
                     dataTransacao,
-                    conta: { id: parseInt(contaId) },
-                    categoria: { id: parseInt(categoriaId) },
+                    contaId: parseInt(contaId),
+                    categoriaId: parseInt(categoriaId),
                     observacao
                 };
                 await api.post(`/transacoes/parcelado?parcelas=${parcelas}`, payload);
                 showToast(`Transação parcelada em ${parcelas}x criada com sucesso!`, 'success');
             } else if (modo === 'RECORRENTE') {
-                // Criação de Transação Fixa / Recorrente:
-                // O backend gera automaticamente as ocorrências retroativas (meses passados) e a previsão para os meses futuros do ano
+                // Criação de Transação Fixa / Recorrente no backend
                 const payloadRecorrencia = {
                     descricao,
                     valor,
                     tipo,
                     frequencia,
                     diaVencimento,
-                    conta: { id: parseInt(contaId) },
-                    categoria: { id: parseInt(categoriaId) },
+                    contaId: parseInt(contaId),
+                    categoriaId: parseInt(categoriaId),
                     dataInicio: dataTransacao,
                     dataFim,
                     observacao
@@ -386,8 +385,8 @@ const transacoesModule = {
                     tipo,
                     status,
                     dataTransacao,
-                    conta: { id: parseInt(contaId) },
-                    categoria: { id: parseInt(categoriaId) },
+                    contaId: parseInt(contaId),
+                    categoriaId: parseInt(categoriaId),
                     observacao
                 };
                 await api.post('/transacoes', payload);
