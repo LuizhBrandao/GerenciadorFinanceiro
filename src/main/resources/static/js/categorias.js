@@ -18,7 +18,11 @@ const categoriasModule = {
 
     async loadCategorias() {
         try {
-            const data = await api.get('/categorias');
+            let data = await api.get('/categorias');
+            if (!data || data.length === 0) {
+                // Tenta inicializar as categorias essenciais se for a primeira vez do usuário
+                data = await api.post('/categorias/inicializar-padrao');
+            }
             this.categorias = data || [];
             this.renderCategoriasList();
             this.updateCategoriasSelects();
@@ -26,6 +30,18 @@ const categoriasModule = {
         } catch (error) {
             showToast('Erro ao carregar categorias.', 'error');
             return [];
+        }
+    },
+
+    async inicializarCategoriasPadrao() {
+        try {
+            const data = await api.post('/categorias/inicializar-padrao');
+            this.categorias = data || [];
+            this.renderCategoriasList();
+            this.updateCategoriasSelects();
+            showToast('Categorias essenciais criadas com sucesso!', 'success');
+        } catch (error) {
+            showToast('Erro ao criar categorias padrão.', 'error');
         }
     },
 
@@ -40,10 +56,15 @@ const categoriasModule = {
                         <i class="fas fa-tags"></i>
                     </div>
                     <h4 class="text-base font-semibold text-slate-700 mb-1">Nenhuma categoria cadastrada</h4>
-                    <p class="text-sm text-slate-400 mb-4">Crie categorias personalizadas para organizar seus ganhos e gastos.</p>
-                    <button onclick="categoriasModule.openNewCategoriaModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
-                        <i class="fas fa-plus mr-1.5"></i> Criar Categoria
-                    </button>
+                    <p class="text-sm text-slate-400 mb-4">Crie categorias personalizadas ou gere as categorias essenciais recomendadas.</p>
+                    <div class="flex items-center justify-center gap-3">
+                        <button onclick="categoriasModule.inicializarCategoriasPadrao()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                            <i class="fas fa-magic mr-1.5"></i> Criar Categorias Essenciais
+                        </button>
+                        <button onclick="categoriasModule.openNewCategoriaModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-colors">
+                            <i class="fas fa-plus mr-1.5"></i> Nova Personalizada
+                        </button>
+                    </div>
                 </div>
             `;
             return;
@@ -98,26 +119,9 @@ const categoriasModule = {
     updateCategoriasSelects(filterTipo = null) {
         const selectTransacao = document.getElementById('transacao-categoria');
         const selectFiltro = document.getElementById('filtro-categoria');
+        const selectRecorrencia = document.getElementById('recorrencia-categoria');
 
-        // Lista padrão completa das categorias essenciais
-        const categoriasPadrao = [
-            { id: 4, nome: 'Moradia & Habitação', tipo: 'DESPESA', icone: 'fa-house' },
-            { id: 5, nome: 'Alimentação & Supermercado', tipo: 'DESPESA', icone: 'fa-utensils' },
-            { id: 6, nome: 'Transporte & Mobilidade', tipo: 'DESPESA', icone: 'fa-car' },
-            { id: 7, nome: 'Saúde & Bem-Estar', tipo: 'DESPESA', icone: 'fa-heart-pulse' },
-            { id: 8, nome: 'Educação & Desenvolvimento', tipo: 'DESPESA', icone: 'fa-graduation-cap' },
-            { id: 9, nome: 'Lazer & Entretenimento', tipo: 'DESPESA', icone: 'fa-ticket' },
-            { id: 10, nome: 'Cuidados Pessoais & Compras', tipo: 'DESPESA', icone: 'fa-bag-shopping' },
-            { id: 11, nome: 'Contas Básicas & Energia', tipo: 'DESPESA', icone: 'fa-bolt' },
-            { id: 12, nome: 'Outros', tipo: 'DESPESA', icone: 'fa-tag' },
-            { id: 1, nome: 'Salário / Remuneração', tipo: 'RECEITA', icone: 'fa-briefcase' },
-            { id: 2, nome: 'Rendimentos & Investimentos', tipo: 'RECEITA', icone: 'fa-chart-line' },
-            { id: 3, nome: 'Freelance & Serviços Extras', tipo: 'RECEITA', icone: 'fa-laptop' },
-            { id: 13, nome: 'Outras Receitas', tipo: 'RECEITA', icone: 'fa-tag' }
-        ];
-
-        const categoriasDisponiveis = this.categorias.length > 0 ? this.categorias : categoriasPadrao;
-
+        const categoriasDisponiveis = this.categorias || [];
         const despesas = categoriasDisponiveis.filter(c => c.tipo === 'DESPESA');
         const receitas = categoriasDisponiveis.filter(c => c.tipo === 'RECEITA');
 
@@ -164,22 +168,38 @@ const categoriasModule = {
             const currentFilterValue = selectFiltro.value;
             let filterHtml = '<option value="">Todas as Categorias</option>';
 
-            filterHtml += '<optgroup label="💳 Despesas">';
-            despesas.forEach(c => {
-                const emoji = this.getCategoryEmoji(c);
-                filterHtml += `<option value="${c.id}">${emoji} ${c.nome}</option>`;
-            });
-            filterHtml += '</optgroup>';
+            if (despesas.length > 0) {
+                filterHtml += '<optgroup label="💳 Despesas">';
+                despesas.forEach(c => {
+                    const emoji = this.getCategoryEmoji(c);
+                    filterHtml += `<option value="${c.id}">${emoji} ${c.nome}</option>`;
+                });
+                filterHtml += '</optgroup>';
+            }
 
-            filterHtml += '<optgroup label="💰 Receitas">';
-            receitas.forEach(c => {
-                const emoji = this.getCategoryEmoji(c);
-                filterHtml += `<option value="${c.id}">${emoji} ${c.nome}</option>`;
-            });
-            filterHtml += '</optgroup>';
+            if (receitas.length > 0) {
+                filterHtml += '<optgroup label="💰 Receitas">';
+                receitas.forEach(c => {
+                    const emoji = this.getCategoryEmoji(c);
+                    filterHtml += `<option value="${c.id}">${emoji} ${c.nome}</option>`;
+                });
+                filterHtml += '</optgroup>';
+            }
 
             selectFiltro.innerHTML = filterHtml;
             if (currentFilterValue) selectFiltro.value = currentFilterValue;
+        }
+
+        // 3. Atualizar Select de Recorrências (se presente)
+        if (selectRecorrencia) {
+            const currentRecValue = selectRecorrencia.value;
+            let recHtml = '<option value="">Selecione uma categoria</option>';
+            categoriasDisponiveis.forEach(c => {
+                const emoji = this.getCategoryEmoji(c);
+                recHtml += `<option value="${c.id}">${emoji} ${c.nome} (${formatTipoTransacao(c.tipo)})</option>`;
+            });
+            selectRecorrencia.innerHTML = recHtml;
+            if (currentRecValue) selectRecorrencia.value = currentRecValue;
         }
     },
 

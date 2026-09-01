@@ -24,8 +24,8 @@ public class TransacaoController {
 
     @GetMapping("/busca")
     public ResponseEntity<List<Transacao>> buscarAvancado(
-            @RequestParam(required = false) java.time.LocalDate dataInicial,
-            @RequestParam(required = false) java.time.LocalDate dataFinal,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dataInicial,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dataFinal,
             @RequestParam(required = false) Long categoriaId,
             @RequestParam(required = false) Long contaId,
             @RequestParam(required = false) java.math.BigDecimal valorMin,

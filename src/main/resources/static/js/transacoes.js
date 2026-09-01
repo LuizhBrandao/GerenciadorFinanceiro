@@ -1,9 +1,10 @@
 /**
- * Módulo de Transações - Gerenciador Financeiro
+ * Módulo de Transações & Lançamentos - Gerenciador Financeiro
  */
 
 const transacoesModule = {
     transacoes: [],
+    currentTab: 'extrato',
 
     init() {
         this.bindEvents();
@@ -13,8 +14,8 @@ const transacoesModule = {
         const formTransacao = document.getElementById('form-transacao');
         const formFiltro = document.getElementById('form-filtro-transacoes');
         const btnLimparFiltros = document.getElementById('btn-limpar-filtros');
-        const checkParcelado = document.getElementById('transacao-parcelado-check');
         const tipoSelect = document.getElementById('transacao-tipo');
+        const dataInput = document.getElementById('transacao-data');
 
         if (tipoSelect) {
             tipoSelect.addEventListener('change', (e) => {
@@ -23,6 +24,26 @@ const transacoesModule = {
                 }
             });
         }
+
+        // Auto-sincronizar dia do vencimento quando a data da transação mudar
+        if (dataInput) {
+            dataInput.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    const dia = parseInt(e.target.value.split('-')[2], 10);
+                    const diaInput = document.getElementById('transacao-dia-vencimento');
+                    if (diaInput && !isNaN(dia)) {
+                        diaInput.value = dia;
+                    }
+                }
+            });
+        }
+
+        // Ouvintes dos Radio Buttons de Modo de Lançamento
+        document.querySelectorAll('input[name="transacao-modo"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.handleModoLancamentoChange(e.target.value);
+            });
+        });
 
         if (formTransacao) {
             formTransacao.addEventListener('submit', (e) => this.handleSaveTransacao(e));
@@ -41,18 +62,57 @@ const transacoesModule = {
                 this.loadTransacoes();
             });
         }
+    },
 
-        if (checkParcelado) {
-            checkParcelado.addEventListener('change', (e) => {
-                const group = document.getElementById('transacao-parcelas-group');
-                if (group) {
-                    if (e.target.checked) {
-                        group.classList.remove('hidden');
-                    } else {
-                        group.classList.add('hidden');
-                    }
-                }
-            });
+    switchTab(tab) {
+        this.currentTab = tab;
+        const btnExtrato = document.getElementById('tab-btn-extrato');
+        const btnRecorrencias = document.getElementById('tab-btn-recorrencias');
+        const contentExtrato = document.getElementById('tab-content-extrato');
+        const contentRecorrencias = document.getElementById('tab-content-recorrencias');
+        const btnProcessar = document.getElementById('btn-processar-pendencias-transacoes');
+
+        if (tab === 'extrato') {
+            if (btnExtrato) {
+                btnExtrato.className = 'px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm';
+            }
+            if (btnRecorrencias) {
+                btnRecorrencias.className = 'px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100';
+            }
+            if (contentExtrato) contentExtrato.classList.remove('hidden');
+            if (contentRecorrencias) contentRecorrencias.classList.add('hidden');
+            if (btnProcessar) btnProcessar.classList.add('hidden');
+
+            this.loadTransacoes();
+        } else {
+            if (btnRecorrencias) {
+                btnRecorrencias.className = 'px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 bg-purple-600 text-white shadow-sm';
+            }
+            if (btnExtrato) {
+                btnExtrato.className = 'px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100';
+            }
+            if (contentExtrato) contentExtrato.classList.add('hidden');
+            if (contentRecorrencias) contentRecorrencias.classList.remove('hidden');
+            if (btnProcessar) btnProcessar.classList.remove('hidden');
+
+            if (window.recorrenciasModule) {
+                recorrenciasModule.loadRecorrencias();
+            }
+        }
+    },
+
+    handleModoLancamentoChange(modo) {
+        const groupParcelas = document.getElementById('transacao-parcelas-group');
+        const groupRecorrencia = document.getElementById('transacao-recorrencia-group');
+
+        if (groupParcelas) {
+            if (modo === 'PARCELADO') groupParcelas.classList.remove('hidden');
+            else groupParcelas.classList.add('hidden');
+        }
+
+        if (groupRecorrencia) {
+            if (modo === 'RECORRENTE') groupRecorrencia.classList.remove('hidden');
+            else groupRecorrencia.classList.add('hidden');
         }
     },
 
@@ -69,20 +129,18 @@ const transacoesModule = {
     },
 
     async aplicarFiltros() {
-        const dataInicial = document.getElementById('filtro-data-inicial').value;
-        const dataFinal = document.getElementById('filtro-data-final').value;
-        const categoriaId = document.getElementById('filtro-categoria').value;
-        const contaId = document.getElementById('filtro-conta').value;
-        const valorMin = document.getElementById('filtro-valor-min').value;
-        const valorMax = document.getElementById('filtro-valor-max').value;
+        const dataInicial = document.getElementById('filtro-data-inicial')?.value;
+        const dataFinal = document.getElementById('filtro-data-final')?.value;
+        const categoriaId = document.getElementById('filtro-categoria')?.value;
+        const contaId = document.getElementById('filtro-conta')?.value;
+        const valorMin = document.getElementById('filtro-valor-min')?.value;
 
         const params = new URLSearchParams();
         if (dataInicial) params.append('dataInicial', dataInicial);
         if (dataFinal) params.append('dataFinal', dataFinal);
         if (categoriaId) params.append('categoriaId', categoriaId);
         if (contaId) params.append('contaId', contaId);
-        if (valorMin) params.append('valorMin', valorMin);
-        if (valorMax) params.append('valorMax', valorMax);
+        if (valorMin && parseFloat(valorMin) > 0) params.append('valorMin', valorMin);
 
         try {
             const query = params.toString() ? `?${params.toString()}` : '';
@@ -91,6 +149,7 @@ const transacoesModule = {
             this.renderTransacoesTable();
             showToast(`Filtro aplicado: ${this.transacoes.length} transação(ões) encontrada(s).`, 'info');
         } catch (error) {
+            console.error('Erro ao buscar transações com filtros:', error);
             showToast('Erro ao buscar transações com filtros.', 'error');
         }
     },
@@ -117,6 +176,10 @@ const transacoesModule = {
             const sinal = isReceita ? '+' : '-';
             const badgeTipo = isReceita ? 'badge-receita' : 'badge-despesa';
 
+            // Detecta se é recorrente ou parcelado para exibir selo informativo
+            const isRecorrente = t.observacao && t.observacao.toLowerCase().includes('recorrente');
+            const isParcelado = t.descricao && t.descricao.includes('(Parcela');
+
             return `
                 <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-0">
                     <td class="px-5 py-3.5 text-xs text-slate-500 whitespace-nowrap">
@@ -124,7 +187,11 @@ const transacoesModule = {
                     </td>
                     <td class="px-5 py-3.5 whitespace-nowrap">
                         <div class="flex flex-col">
-                            <span class="font-semibold text-slate-800 text-sm">${t.descricao}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-semibold text-slate-800 text-sm">${t.descricao}</span>
+                                ${isRecorrente ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-600 border border-purple-200" title="Lançamento Recorrente / Fixo"><i class="fas fa-arrows-rotate mr-0.5"></i>Fixa</span>' : ''}
+                                ${isParcelado ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-200" title="Lançamento Parcelado"><i class="fas fa-layer-group mr-0.5"></i>Parcelada</span>' : ''}
+                            </div>
                             ${t.observacao ? `<span class="text-xs text-slate-400 truncate max-w-xs">${t.observacao}</span>` : ''}
                         </div>
                     </td>
@@ -159,15 +226,31 @@ const transacoesModule = {
         }).join('');
     },
 
-    async openNewTransacaoModal() {
+    async openNewTransacaoModal(modoInicial = 'UNICO') {
         const form = document.getElementById('form-transacao');
         if (form) form.reset();
         document.getElementById('transacao-id').value = '';
-        document.getElementById('transacao-data').value = getTodayIsoDate();
+        
+        const today = getTodayIsoDate();
+        document.getElementById('transacao-data').value = today;
+        
+        const diaAtual = new Date().getDate();
+        const diaVencInput = document.getElementById('transacao-dia-vencimento');
+        if (diaVencInput) diaVencInput.value = diaAtual;
+
         document.getElementById('modal-transacao-title').textContent = 'Nova Transação';
-        document.getElementById('transacao-parcelado-container').classList.remove('hidden');
-        document.getElementById('transacao-parcelas-group').classList.add('hidden');
-        document.getElementById('transacao-parcelado-check').checked = false;
+        document.getElementById('transacao-modo-container').classList.remove('hidden');
+
+        // Selecionar o modo inicial
+        const radioUnico = document.getElementById('modo-unico');
+        const radioParcelado = document.getElementById('modo-parcelado');
+        const radioRecorrente = document.getElementById('modo-recorrente');
+
+        if (modoInicial === 'PARCELADO' && radioParcelado) radioParcelado.checked = true;
+        else if (modoInicial === 'RECORRENTE' && radioRecorrente) radioRecorrente.checked = true;
+        else if (radioUnico) radioUnico.checked = true;
+
+        this.handleModoLancamentoChange(modoInicial);
 
         // Atualizar selects de categorias e contas
         const tipoInicial = document.getElementById('transacao-tipo')?.value || 'DESPESA';
@@ -217,8 +300,9 @@ const transacoesModule = {
         document.getElementById('transacao-observacao').value = transacao.observacao || '';
 
         document.getElementById('modal-transacao-title').textContent = 'Editar Transação';
-        document.getElementById('transacao-parcelado-container').classList.add('hidden');
+        document.getElementById('transacao-modo-container').classList.add('hidden');
         document.getElementById('transacao-parcelas-group').classList.add('hidden');
+        document.getElementById('transacao-recorrencia-group').classList.add('hidden');
 
         openModal('modal-transacao');
     },
@@ -234,42 +318,88 @@ const transacoesModule = {
         const contaId = document.getElementById('transacao-conta').value;
         const categoriaId = document.getElementById('transacao-categoria').value;
         const observacao = document.getElementById('transacao-observacao').value.trim();
-        const isParcelado = document.getElementById('transacao-parcelado-check')?.checked;
-        const parcelas = parseInt(document.getElementById('transacao-parcelas')?.value) || 1;
+
+        // Obter modo selecionado (Único, Parcelado ou Recorrente)
+        const modo = document.querySelector('input[name="transacao-modo"]:checked')?.value || 'UNICO';
+        const parcelas = parseInt(document.getElementById('transacao-parcelas')?.value, 10) || 1;
+        const frequencia = document.getElementById('transacao-frequencia')?.value || 'MENSAL';
+        const diaVencimento = parseInt(document.getElementById('transacao-dia-vencimento')?.value, 10) || 1;
+        const dataFim = document.getElementById('transacao-data-fim')?.value || null;
 
         if (!descricao || isNaN(valor) || valor <= 0 || !tipo || !status || !dataTransacao || !contaId || !categoriaId) {
             showToast('Preencha todos os campos obrigatórios da transação.', 'warning');
             return;
         }
 
-        const payload = {
-            descricao,
-            valor,
-            tipo,
-            status,
-            dataTransacao,
-            conta: { id: parseInt(contaId) },
-            categoria: { id: parseInt(categoriaId) },
-            observacao
-        };
-
         try {
             if (id) {
-                // Atualizar
+                // Edição de transação existente
+                const payload = {
+                    descricao,
+                    valor,
+                    tipo,
+                    status,
+                    dataTransacao,
+                    conta: { id: parseInt(contaId) },
+                    categoria: { id: parseInt(categoriaId) },
+                    observacao
+                };
                 await api.put(`/transacoes/${id}`, payload);
                 showToast('Transação atualizada com sucesso!', 'success');
-            } else if (isParcelado && parcelas > 1) {
-                // Criar Parcelado
+            } else if (modo === 'PARCELADO' && parcelas > 1) {
+                // Criação Parcelada
+                const payload = {
+                    descricao,
+                    valor,
+                    tipo,
+                    status,
+                    dataTransacao,
+                    conta: { id: parseInt(contaId) },
+                    categoria: { id: parseInt(categoriaId) },
+                    observacao
+                };
                 await api.post(`/transacoes/parcelado?parcelas=${parcelas}`, payload);
                 showToast(`Transação parcelada em ${parcelas}x criada com sucesso!`, 'success');
+            } else if (modo === 'RECORRENTE') {
+                // Criação de Transação Fixa / Recorrente:
+                // O backend gera automaticamente as ocorrências retroativas (meses passados) e a previsão para os meses futuros do ano
+                const payloadRecorrencia = {
+                    descricao,
+                    valor,
+                    tipo,
+                    frequencia,
+                    diaVencimento,
+                    conta: { id: parseInt(contaId) },
+                    categoria: { id: parseInt(categoriaId) },
+                    dataInicio: dataTransacao,
+                    dataFim,
+                    observacao
+                };
+                await api.post('/recorrencias', payloadRecorrencia);
+
+                showToast('Despesa/Receita fixa cadastrada e histórico/previsão do ano gerados com sucesso!', 'success');
             } else {
-                // Criar Simples
+                // Criação Simples / Única
+                const payload = {
+                    descricao,
+                    valor,
+                    tipo,
+                    status,
+                    dataTransacao,
+                    conta: { id: parseInt(contaId) },
+                    categoria: { id: parseInt(categoriaId) },
+                    observacao
+                };
                 await api.post('/transacoes', payload);
                 showToast('Transação registrada com sucesso!', 'success');
             }
 
             closeModal('modal-transacao');
             await this.loadTransacoes();
+
+            if (window.recorrenciasModule) {
+                await window.recorrenciasModule.loadRecorrencias();
+            }
             if (window.contasModule) {
                 await window.contasModule.loadContas();
             }

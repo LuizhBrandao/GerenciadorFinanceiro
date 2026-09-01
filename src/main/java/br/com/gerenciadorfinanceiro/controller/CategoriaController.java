@@ -1,5 +1,6 @@
 package br.com.gerenciadorfinanceiro.controller;
 
+import br.com.gerenciadorfinanceiro.config.DataInitializer;
 import br.com.gerenciadorfinanceiro.exception.EntidadeNaoEncontradaException;
 import br.com.gerenciadorfinanceiro.model.Categoria;
 import br.com.gerenciadorfinanceiro.model.Usuario;
@@ -20,7 +21,17 @@ public class CategoriaController {
 
     @GetMapping
     public ResponseEntity<List<Categoria>> listar(@AuthenticationPrincipal Usuario usuario) {
-        return ResponseEntity.ok(categoriaRepository.findByUsuarioId(usuario.getId()));
+        List<Categoria> categorias = categoriaRepository.findByUsuarioId(usuario.getId());
+        if (categorias.isEmpty()) {
+            categorias = categoriaRepository.saveAll(DataInitializer.criarCategoriasPadraoParaUsuario(usuario));
+        }
+        return ResponseEntity.ok(categorias);
+    }
+
+    @PostMapping("/inicializar-padrao")
+    public ResponseEntity<List<Categoria>> inicializarPadrao(@AuthenticationPrincipal Usuario usuario) {
+        List<Categoria> padrao = DataInitializer.criarCategoriasPadraoParaUsuario(usuario);
+        return ResponseEntity.ok(categoriaRepository.saveAll(padrao));
     }
 
     @PostMapping

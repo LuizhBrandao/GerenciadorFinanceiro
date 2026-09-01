@@ -77,7 +77,11 @@ const app = {
 
         // Alterna seções de conteúdo
         document.querySelectorAll('.view-section').forEach(section => {
-            if (section.id === `view-${viewName}`) {
+            const isTargetView = (viewName === 'recorrencias') 
+                ? (section.id === 'view-transacoes')
+                : (section.id === `view-${viewName}`);
+
+            if (isTargetView) {
                 section.classList.remove('hidden');
             } else {
                 section.classList.add('hidden');
@@ -96,14 +100,15 @@ const app = {
                 this.loadDashboardData();
                 break;
             case 'transacoes':
+                transacoesModule.switchTab('extrato');
                 transacoesModule.loadTransacoes();
                 contasModule.loadContas();
                 categoriasModule.loadCategorias();
                 break;
             case 'recorrencias':
+                transacoesModule.switchTab('recorrencias');
                 contasModule.loadContas();
                 categoriasModule.loadCategorias();
-                recorrenciasModule.loadRecorrencias();
                 break;
             case 'contas':
                 contasModule.loadContas();
