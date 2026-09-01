@@ -76,26 +76,85 @@ const categoriasModule = {
         }).join('');
     },
 
-    updateCategoriasSelects() {
-        const selects = [
-            document.getElementById('transacao-categoria'),
-            document.getElementById('filtro-categoria')
-        ];
+    updateCategoriasSelects(filterTipo = null) {
+        const selectTransacao = document.getElementById('transacao-categoria');
+        const selectFiltro = document.getElementById('filtro-categoria');
 
-        selects.forEach(select => {
-            if (!select) return;
-            const currentValue = select.value;
-            const isFilter = select.id === 'filtro-categoria';
+        // 1. Atualizar Select do Modal de Transação
+        if (selectTransacao) {
+            const currentValue = selectTransacao.value;
+            let html = '<option value="">Selecione uma categoria</option>';
 
-            let html = isFilter ? '<option value="">Todas as Categorias</option>' : '<option value="">Selecione uma categoria</option>';
+            const categoriasDisponiveis = this.categorias.length > 0 ? this.categorias : [
+                { id: 4, nome: 'Moradia & Habitação', tipo: 'DESPESA' },
+                { id: 5, nome: 'Alimentação & Supermercado', tipo: 'DESPESA' },
+                { id: 6, nome: 'Transporte & Mobilidade', tipo: 'DESPESA' },
+                { id: 7, nome: 'Saúde & Bem-Estar', tipo: 'DESPESA' },
+                { id: 8, nome: 'Educação & Desenvolvimento', tipo: 'DESPESA' },
+                { id: 9, nome: 'Lazer & Entretenimento', tipo: 'DESPESA' },
+                { id: 10, nome: 'Cuidados Pessoais & Compras', tipo: 'DESPESA' },
+                { id: 1, nome: 'Salário e Remuneração', tipo: 'RECEITA' },
+                { id: 2, nome: 'Rendimentos & Investimentos', tipo: 'RECEITA' },
+                { id: 3, nome: 'Freelance & Serviços Extras', tipo: 'RECEITA' }
+            ];
 
-            this.categorias.forEach(c => {
-                html += `<option value="${c.id}">${c.nome} (${formatTipoTransacao(c.tipo)})</option>`;
+            const despesas = categoriasDisponiveis.filter(c => c.tipo === 'DESPESA');
+            const receitas = categoriasDisponiveis.filter(c => c.tipo === 'RECEITA');
+
+            if (filterTipo === 'DESPESA') {
+                despesas.forEach(c => {
+                    html += `<option value="${c.id}">${c.nome}</option>`;
+                });
+            } else if (filterTipo === 'RECEITA') {
+                receitas.forEach(c => {
+                    html += `<option value="${c.id}">${c.nome}</option>`;
+                });
+            } else {
+                if (despesas.length > 0) {
+                    html += '<optgroup label="💳 Despesas">';
+                    despesas.forEach(c => {
+                        html += `<option value="${c.id}">${c.nome}</option>`;
+                    });
+                    html += '</optgroup>';
+                }
+                if (receitas.length > 0) {
+                    html += '<optgroup label="💰 Receitas">';
+                    receitas.forEach(c => {
+                        html += `<option value="${c.id}">${c.nome}</option>`;
+                    });
+                    html += '</optgroup>';
+                }
+            }
+
+            selectTransacao.innerHTML = html;
+            if (currentValue) selectTransacao.value = currentValue;
+        }
+
+        // 2. Atualizar Select do Filtro de Transações
+        if (selectFiltro) {
+            const currentFilterValue = selectFiltro.value;
+            let filterHtml = '<option value="">Todas as Categorias</option>';
+            
+            const categoriasFiltro = this.categorias.length > 0 ? this.categorias : [
+                { id: 4, nome: 'Moradia & Habitação', tipo: 'DESPESA' },
+                { id: 5, nome: 'Alimentação & Supermercado', tipo: 'DESPESA' },
+                { id: 6, nome: 'Transporte & Mobilidade', tipo: 'DESPESA' },
+                { id: 7, nome: 'Saúde & Bem-Estar', tipo: 'DESPESA' },
+                { id: 8, nome: 'Educação & Desenvolvimento', tipo: 'DESPESA' },
+                { id: 9, nome: 'Lazer & Entretenimento', tipo: 'DESPESA' },
+                { id: 10, nome: 'Cuidados Pessoais & Compras', tipo: 'DESPESA' },
+                { id: 1, nome: 'Salário e Remuneração', tipo: 'RECEITA' },
+                { id: 2, nome: 'Rendimentos & Investimentos', tipo: 'RECEITA' },
+                { id: 3, nome: 'Freelance & Serviços Extras', tipo: 'RECEITA' }
+            ];
+
+            categoriasFiltro.forEach(c => {
+                filterHtml += `<option value="${c.id}">${c.nome} (${formatTipoTransacao(c.tipo)})</option>`;
             });
 
-            select.innerHTML = html;
-            if (currentValue) select.value = currentValue;
-        });
+            selectFiltro.innerHTML = filterHtml;
+            if (currentFilterValue) selectFiltro.value = currentFilterValue;
+        }
     },
 
     openNewCategoriaModal() {

@@ -14,6 +14,15 @@ const transacoesModule = {
         const formFiltro = document.getElementById('form-filtro-transacoes');
         const btnLimparFiltros = document.getElementById('btn-limpar-filtros');
         const checkParcelado = document.getElementById('transacao-parcelado-check');
+        const tipoSelect = document.getElementById('transacao-tipo');
+
+        if (tipoSelect) {
+            tipoSelect.addEventListener('change', (e) => {
+                if (window.categoriasModule) {
+                    categoriasModule.updateCategoriasSelects(e.target.value);
+                }
+            });
+        }
 
         if (formTransacao) {
             formTransacao.addEventListener('submit', (e) => this.handleSaveTransacao(e));
@@ -150,7 +159,7 @@ const transacoesModule = {
         }).join('');
     },
 
-    openNewTransacaoModal() {
+    async openNewTransacaoModal() {
         const form = document.getElementById('form-transacao');
         if (form) form.reset();
         document.getElementById('transacao-id').value = '';
@@ -160,12 +169,34 @@ const transacoesModule = {
         document.getElementById('transacao-parcelas-group').classList.add('hidden');
         document.getElementById('transacao-parcelado-check').checked = false;
 
+        // Atualizar selects de categorias e contas
+        const tipoInicial = document.getElementById('transacao-tipo')?.value || 'DESPESA';
+        if (window.categoriasModule) {
+            if (categoriasModule.categorias.length === 0) {
+                await categoriasModule.loadCategorias();
+            }
+            categoriasModule.updateCategoriasSelects(tipoInicial);
+        }
+        if (window.contasModule) {
+            if (contasModule.contas.length === 0) {
+                await contasModule.loadContas();
+            }
+            contasModule.updateContasSelects();
+        }
+
         openModal('modal-transacao');
     },
 
-    openEditTransacaoModal(id) {
+    async openEditTransacaoModal(id) {
         const transacao = this.transacoes.find(t => t.id === id);
         if (!transacao) return;
+
+        if (window.categoriasModule && categoriasModule.categorias.length === 0) {
+            await categoriasModule.loadCategorias();
+        }
+        if (window.contasModule && contasModule.contas.length === 0) {
+            await contasModule.loadContas();
+        }
 
         document.getElementById('transacao-id').value = transacao.id;
         document.getElementById('transacao-descricao').value = transacao.descricao;
@@ -173,6 +204,14 @@ const transacoesModule = {
         document.getElementById('transacao-tipo').value = transacao.tipo;
         document.getElementById('transacao-status').value = transacao.status;
         document.getElementById('transacao-data').value = transacao.dataTransacao;
+
+        if (window.categoriasModule) {
+            categoriasModule.updateCategoriasSelects(transacao.tipo);
+        }
+        if (window.contasModule) {
+            contasModule.updateContasSelects();
+        }
+
         document.getElementById('transacao-conta').value = transacao.conta ? transacao.conta.id : '';
         document.getElementById('transacao-categoria').value = transacao.categoria ? transacao.categoria.id : '';
         document.getElementById('transacao-observacao').value = transacao.observacao || '';
