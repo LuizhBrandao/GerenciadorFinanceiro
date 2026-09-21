@@ -72,4 +72,9 @@ public class TransacaoController {
         transacaoService.excluir(id, usuario.getId());
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/efetivar")
+    public ResponseEntity<TransacaoResponseDto> efetivar(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(transacaoService.efetivar(id, usuario.getId()));
+    }
 }

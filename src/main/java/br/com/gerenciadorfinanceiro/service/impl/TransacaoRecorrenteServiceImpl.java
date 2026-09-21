@@ -358,8 +358,18 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
             }
         }
 
-        if (!geradas.isEmpty()) {
-            rec.setUltimoLancamento(geradas.get(geradas.size() - 1).getDataTransacao());
+        LocalDate ultimoAteHoje = existentes.stream()
+                .filter(t -> t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()))
+                .map(Transacao::getDataTransacao)
+                .filter(d -> d != null && !d.isAfter(hoje))
+                .max(LocalDate::compareTo)
+                .orElse(null);
+
+        if (ultimoAteHoje != null) {
+            rec.setUltimoLancamento(ultimoAteHoje);
+            transacaoRecorrenteRepository.save(rec);
+        } else if (!geradas.isEmpty()) {
+            rec.setUltimoLancamento(geradas.get(0).getDataTransacao());
             transacaoRecorrenteRepository.save(rec);
         }
 

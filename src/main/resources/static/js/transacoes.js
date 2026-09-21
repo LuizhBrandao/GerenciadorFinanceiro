@@ -214,6 +214,11 @@ const transacoesModule = {
                         ${sinal} ${formatCurrency(t.valor)}
                     </td>
                     <td class="px-5 py-3.5 whitespace-nowrap text-right text-xs">
+                        ${t.status === 'PENDENTE' ? `
+                            <button onclick="transacoesModule.efetivarTransacao(${t.id})" title="Marcar como Paga e Atualizar Saldo" class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-bold text-xs transition-colors mr-1">
+                                <i class="fas fa-check text-[10px]"></i> Pagar
+                            </button>
+                        ` : ''}
                         <button onclick="transacoesModule.openEditTransacaoModal(${t.id})" title="Editar" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors mr-1">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -407,6 +412,25 @@ const transacoesModule = {
             }
         } catch (error) {
             showToast(error.message || 'Erro ao salvar transação.', 'error');
+        }
+    },
+
+    async efetivarTransacao(id) {
+        try {
+            await api.request(`/transacoes/${id}/efetivar`, { method: 'PATCH' });
+            showToast('Transação marcada como PAGA e saldo atualizado!', 'success');
+            await this.loadTransacoes();
+            if (window.contasModule) {
+                await window.contasModule.loadContas();
+            }
+            if (window.dashboardModule) {
+                window.dashboardModule.loadSummary();
+            }
+            if (window.recorrenciasModule) {
+                window.recorrenciasModule.loadRecorrencias();
+            }
+        } catch (error) {
+            showToast(error.message || 'Erro ao efetivar transação.', 'error');
         }
     },
 

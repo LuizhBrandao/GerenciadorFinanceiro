@@ -89,7 +89,9 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private List<TransacaoResumoDto> extrairTransacoesRecentes(List<Transacao> transacoes, int limit) {
+        LocalDate hoje = LocalDate.now();
         return transacoes.stream()
+                .filter(t -> t.getDataTransacao() != null && !t.getDataTransacao().isAfter(hoje))
                 .sorted(Comparator.comparing(Transacao::getDataTransacao, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
                 .limit(limit)
                 .map(DtoMapper::toTransacaoResumo)

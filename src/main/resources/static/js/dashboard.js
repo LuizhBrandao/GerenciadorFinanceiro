@@ -41,6 +41,8 @@ const dashboardModule = {
         const elBalancoMes = document.getElementById('dash-balanco-mes');
         const elHeaderSaldo = document.getElementById('header-saldo-rapido');
         const elHeaderInvestimentos = document.getElementById('header-investimentos-rapido');
+        const elReceitasSub = document.getElementById('dash-receitas-sub');
+        const elDespesasSub = document.getElementById('dash-despesas-sub');
 
         if (elSaldoConsolidado) elSaldoConsolidado.textContent = formatCurrency(saldoCorrentes);
         if (elTotalInvestimentos) elTotalInvestimentos.textContent = formatCurrency(saldoInvestimentos);
@@ -48,6 +50,20 @@ const dashboardModule = {
         if (elHeaderInvestimentos) elHeaderInvestimentos.textContent = formatCurrency(saldoInvestimentos);
         if (elReceitasMes) elReceitasMes.textContent = formatCurrency(receitasMes);
         if (elDespesasMes) elDespesasMes.textContent = formatCurrency(despesasMes);
+
+        const recPendentes = metricas ? (parseFloat(metricas.receitasPendentes) || 0) : 0;
+        const despPendentes = metricas ? (parseFloat(metricas.despesasPendentes) || 0) : 0;
+
+        if (elReceitasSub) {
+            elReceitasSub.innerHTML = recPendentes > 0 
+                ? `Pagas no mês <span class="text-amber-600 font-semibold">(+ ${formatCurrency(recPendentes)} previsto)</span>`
+                : 'Ganhos no mês atual';
+        }
+        if (elDespesasSub) {
+            elDespesasSub.innerHTML = despPendentes > 0 
+                ? `Pagas no mês <span class="text-amber-600 font-semibold">(+ ${formatCurrency(despPendentes)} a pagar)</span>`
+                : 'Gastos no mês atual';
+        }
 
         if (elBalancoMes) {
             elBalancoMes.textContent = formatCurrency(balancoMes);
@@ -93,7 +109,13 @@ const dashboardModule = {
                         ${t.contaNome || '-'}
                     </td>
                     <td class="py-3 px-4 whitespace-nowrap">
-                        <span class="badge badge-status-${(t.status || '').toLowerCase()}">${formatStatusTransacao(t.status)}</span>
+                        ${t.status === 'PENDENTE' ? `
+                            <button onclick="transacoesModule.efetivarTransacao(${t.id})" title="Marcar como Paga e Atualizar Saldo" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 hover:bg-emerald-50 hover:text-emerald-700 border border-amber-200 transition-colors">
+                                <i class="fas fa-clock text-[9px]"></i> Pendente <span class="underline ml-0.5 font-black text-emerald-600">(Pagar)</span>
+                            </button>
+                        ` : `
+                            <span class="badge badge-status-${(t.status || '').toLowerCase()}">${formatStatusTransacao(t.status)}</span>
+                        `}
                     </td>
                     <td class="py-3 px-4 text-right font-bold text-xs ${colorClass} whitespace-nowrap">
                         ${sinal} ${formatCurrency(t.valor)}

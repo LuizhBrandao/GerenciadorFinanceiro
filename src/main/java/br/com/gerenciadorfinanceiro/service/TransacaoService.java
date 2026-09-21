@@ -29,4 +29,6 @@ public interface TransacaoService {
     void excluir(Long id, Long usuarioId);
 
     List<TransacaoResponseDto> criarParcelamento(TransacaoRequestDto request, int quantidadeParcelas, Usuario usuario);
+
+    TransacaoResponseDto efetivar(Long id, Long usuarioId);
 }

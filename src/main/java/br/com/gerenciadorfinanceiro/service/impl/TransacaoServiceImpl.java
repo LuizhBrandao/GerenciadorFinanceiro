@@ -217,6 +217,20 @@ public class TransacaoServiceImpl implements TransacaoService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public TransacaoResponseDto efetivar(Long id, Long usuarioId) {
+        Transacao transacao = buscarEntidadePorId(id, usuarioId);
+        if (transacao.getStatus() != StatusTransacao.PAGA) {
+            transacao.setStatus(StatusTransacao.PAGA);
+            if (transacao.getConta() != null) {
+                atualizarSaldoConta(transacao.getConta(), transacao.getTipo(), transacao.getValor(), false);
+            }
+            transacao = transacaoRepository.save(transacao);
+        }
+        return DtoMapper.toTransacaoResponse(transacao);
+    }
+
     private void atualizarSaldoConta(Conta conta, TipoTransacao tipo, BigDecimal valor, boolean isEstorno) {
         if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
             return;
