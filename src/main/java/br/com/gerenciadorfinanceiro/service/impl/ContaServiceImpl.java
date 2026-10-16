@@ -68,10 +68,12 @@ public class ContaServiceImpl implements ContaService {
     @Transactional
     public ContaResponseDto atualizar(Long id, ContaRequestDto request, Long usuarioId) {
         Conta existente = buscarEntidadePorId(id, usuarioId);
-        existente.setNome(request.nome());
-        existente.setInstituicaoFinanceira(request.instituicaoFinanceira());
-        existente.setTipoConta(request.tipoConta());
-        
+        existente.atualizarDadosCadastrais(
+                request.nome(),
+                request.instituicaoFinanceira(),
+                request.tipoConta()
+        );
+
         Conta salva = contaRepository.save(existente);
         return DtoMapper.toContaResponse(salva);
     }
@@ -176,6 +178,8 @@ public class ContaServiceImpl implements ContaService {
         Conta conta = buscarEntidadePorId(contaId, usuarioId);
         List<Transacao> extrato = transacaoRepository.findByContaIdAndUsuarioId(conta.getId(), usuarioId);
         return extrato.stream()
+                .sorted(java.util.Comparator.comparing(Transacao::getDataTransacao, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder()))
+                        .thenComparing(Transacao::getId, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
                 .map(DtoMapper::toTransacaoResponse)
                 .collect(Collectors.toList());
     }

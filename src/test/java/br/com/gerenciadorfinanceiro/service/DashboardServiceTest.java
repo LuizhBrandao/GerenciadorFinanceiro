@@ -103,4 +103,29 @@ class DashboardServiceTest {
         assertEquals(6, dashboard.evolucaoMensal().receitas().size());
         assertEquals(6, dashboard.evolucaoMensal().despesas().size());
     }
+
+    @Test
+    @DisplayName("Não deve contabilizar transferências entre contas como receita ou despesa operacional do mês")
+    void deveIgnorarTransferenciasNoCalculoDeReceitasEDespesasDoMes() {
+        Conta contaReserva = new Conta(usuario, "Reserva", "Banco", TipoConta.POUPANCA, BigDecimal.valueOf(1000));
+        contaReserva.setId(20L);
+
+        Transacao despesaReal = new Transacao(usuario, "Mercado", new BigDecimal("200.00"), TipoTransacao.DESPESA, StatusTransacao.PAGA, LocalDate.now(), conta, catAlimentacao, "");
+        Transacao saidaTransf = Transacao.criarSaidaTransferencia(conta, contaReserva, new BigDecimal("500.00"), catAlimentacao);
+        Transacao entradaTransf = Transacao.criarEntradaTransferencia(conta, contaReserva, new BigDecimal("500.00"), catSalario);
+
+        ResumoSaldosDto resumoSaldos = new ResumoSaldosDto(
+                BigDecimal.valueOf(1300), BigDecimal.valueOf(1500), BigDecimal.valueOf(2800), 1, 1
+        );
+
+        when(contaService.obterResumoSaldos(1L)).thenReturn(resumoSaldos);
+        when(transacaoRepository.findByUsuarioId(1L)).thenReturn(List.of(despesaReal, saidaTransf, entradaTransf));
+
+        DashboardDto dashboard = dashboardService.obterDashboard(1L);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(dashboard.metricasMes().receitasMes()));
+        assertEquals(0, new BigDecimal("200.00").compareTo(dashboard.metricasMes().despesasMes()));
+        assertEquals(1, dashboard.despesasPorCategoria().size());
+        assertEquals(3, dashboard.transacoesRecentes().size());
+    }
 }

@@ -14,13 +14,17 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "contas")
 @Getter
-@Setter
 @NoArgsConstructor
 public class Conta {
 
     @Id
+    @Setter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Version
+    @Column(name = "version", columnDefinition = "bigint default 0")
+    private Long version = 0L;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -67,9 +71,24 @@ public class Conta {
         if (this.ativo == null) {
             this.ativo = true;
         }
+        if (this.version == null) {
+            this.version = 0L;
+        }
     }
 
     // Métodos de Comportamento e Regras de Negócio (POO & Encapsulamento)
+    public void atualizarDadosCadastrais(String nome, String instituicaoFinanceira, TipoConta tipoConta) {
+        if (nome == null || nome.isBlank()) {
+            throw new IllegalArgumentException("O nome da conta é obrigatório.");
+        }
+        if (tipoConta == null) {
+            throw new IllegalArgumentException("O tipo da conta é obrigatório.");
+        }
+        this.nome = nome.trim();
+        this.instituicaoFinanceira = instituicaoFinanceira;
+        this.tipoConta = tipoConta;
+    }
+
     public void creditar(BigDecimal valor) {
         if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("O valor para crédito deve ser maior que zero.");

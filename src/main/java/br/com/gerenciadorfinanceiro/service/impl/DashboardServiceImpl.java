@@ -64,6 +64,9 @@ public class DashboardServiceImpl implements DashboardService {
         BigDecimal despesasPendentes = BigDecimal.ZERO;
 
         for (Transacao t : transacoes) {
+            if (t.isTransferenciaPatrimonial()) {
+                continue;
+            }
             LocalDate data = t.getDataTransacao();
             if (data != null && data.getMonthValue() == mes && data.getYear() == ano) {
                 BigDecimal valor = t.getValor() != null ? t.getValor() : BigDecimal.ZERO;
@@ -100,6 +103,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     private List<DespesaPorCategoriaDto> calcularDespesasPorCategoria(List<Transacao> transacoes) {
         List<Transacao> despesasPagas = transacoes.stream()
+                .filter(t -> !t.isTransferenciaPatrimonial())
                 .filter(t -> t.getTipo() == TipoTransacao.DESPESA && t.getStatus() == StatusTransacao.PAGA)
                 .toList();
 
@@ -152,6 +156,9 @@ public class DashboardServiceImpl implements DashboardService {
             BigDecimal totalDespesas = BigDecimal.ZERO;
 
             for (Transacao t : transacoes) {
+                if (t.isTransferenciaPatrimonial()) {
+                    continue;
+                }
                 if (t.getStatus() == StatusTransacao.PAGA && t.getDataTransacao() != null) {
                     if (t.getDataTransacao().getMonthValue() == mes && t.getDataTransacao().getYear() == ano) {
                         BigDecimal val = t.getValor() != null ? t.getValor() : BigDecimal.ZERO;

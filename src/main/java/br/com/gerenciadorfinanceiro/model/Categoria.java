@@ -10,11 +10,11 @@ import lombok.Setter;
 @Entity
 @Table(name = "categorias")
 @Getter
-@Setter
 @NoArgsConstructor
 public class Categoria {
 
     @Id
+    @Setter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

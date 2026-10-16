@@ -123,16 +123,18 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
 
         FrequenciaRecorrencia freq = (request.frequencia() != null) ? request.frequencia() : FrequenciaRecorrencia.MENSAL;
 
-        existente.setDescricao(request.descricao());
-        existente.setValor(request.valor());
-        existente.setTipo(request.tipo());
-        existente.setFrequencia(freq);
-        existente.setDiaVencimento(diaVencimento);
-        existente.setConta(conta);
-        existente.setCategoria(categoria);
-        existente.setDataInicio(request.dataInicio());
-        existente.setDataFim(request.dataFim());
-        existente.setObservacao(request.observacao());
+        existente.atualizarPlano(
+                request.descricao(),
+                request.valor(),
+                request.tipo(),
+                freq,
+                diaVencimento,
+                conta,
+                categoria,
+                request.dataInicio(),
+                request.dataFim(),
+                request.observacao()
+        );
 
         TransacaoRecorrente salva = transacaoRecorrenteRepository.save(existente);
 
@@ -146,7 +148,7 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
     @Transactional
     public RecorrenciaResponseDto alternarStatus(Long id, Long usuarioId) {
         TransacaoRecorrente recorrencia = buscarEntidadePorId(id, usuarioId);
-        recorrencia.setAtivo(!recorrencia.getAtivo());
+        recorrencia.alternarAtivacao();
         TransacaoRecorrente salva = transacaoRecorrenteRepository.save(recorrencia);
         return DtoMapper.toRecorrenciaResponse(salva);
     }
@@ -236,16 +238,7 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
                     || (descricaoAntiga != null && t.getDescricao().trim().equalsIgnoreCase(descricaoAntiga.trim()));
 
             if (pertence) {
-                t.setRecorrencia(rec);
-                t.setDescricao(rec.getDescricao());
-                t.setCategoria(rec.getCategoria());
-                t.setConta(rec.getConta());
-                t.setTipo(rec.getTipo());
-
-                if (t.getStatus() == StatusTransacao.PENDENTE && rec.getValor() != null) {
-                    t.setValor(rec.getValor());
-                }
-
+                t.sincronizarComRecorrencia(rec);
                 transacaoRepository.save(t);
             }
         }
@@ -366,10 +359,10 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
                 .orElse(null);
 
         if (ultimoAteHoje != null) {
-            rec.setUltimoLancamento(ultimoAteHoje);
+            rec.registrarUltimoLancamento(ultimoAteHoje);
             transacaoRecorrenteRepository.save(rec);
         } else if (!geradas.isEmpty()) {
-            rec.setUltimoLancamento(geradas.get(0).getDataTransacao());
+            rec.registrarUltimoLancamento(geradas.get(0).getDataTransacao());
             transacaoRecorrenteRepository.save(rec);
         }
 
@@ -398,6 +391,7 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
                 rec.getCategoria(),
                 "[Lançamento Recorrente]" + sufixoObservacao
         );
+        transacao.vincularRecorrencia(rec);
 
         return transacaoService.salvarEntidade(transacao);
     }

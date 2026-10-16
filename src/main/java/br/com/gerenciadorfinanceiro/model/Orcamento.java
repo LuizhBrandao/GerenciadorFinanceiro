@@ -1,5 +1,7 @@
 package br.com.gerenciadorfinanceiro.model;
 
+import br.com.gerenciadorfinanceiro.model.vo.CompetenciaMensal;
+import br.com.gerenciadorfinanceiro.model.vo.ValorMonetario;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,11 +14,11 @@ import java.math.BigDecimal;
         @UniqueConstraint(columnNames = {"categoria_id", "ano", "mes"})
 })
 @Getter
-@Setter
 @NoArgsConstructor
 public class Orcamento {
 
     @Id
+    @Setter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -37,11 +39,22 @@ public class Orcamento {
     private String observacao;
 
     public Orcamento(Categoria categoria, Integer ano, Integer mes, BigDecimal valorLimite, String observacao) {
+        CompetenciaMensal competencia = new CompetenciaMensal(mes, ano);
         this.categoria = categoria;
-        this.ano = ano;
-        this.mes = mes;
-        this.valorLimite = valorLimite;
+        this.ano = competencia.ano();
+        this.mes = competencia.mes();
+        this.valorLimite = ValorMonetario.ofPositivo(valorLimite).quantia();
         this.observacao = observacao;
+    }
+
+    public void atualizarLimite(BigDecimal novoLimite, String novaObservacao) {
+        this.valorLimite = ValorMonetario.ofPositivo(novoLimite).quantia();
+        this.observacao = novaObservacao;
+    }
+
+    public boolean ultrapassouLimite(BigDecimal totalGasto) {
+        if (totalGasto == null) return false;
+        return totalGasto.compareTo(this.valorLimite) > 0;
     }
 }
 

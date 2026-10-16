@@ -1,19 +1,27 @@
 package br.com.gerenciadorfinanceiro.service;
 
 import br.com.gerenciadorfinanceiro.exception.SaldoInsuficienteException;
+import br.com.gerenciadorfinanceiro.model.Categoria;
 import br.com.gerenciadorfinanceiro.model.Conta;
+import br.com.gerenciadorfinanceiro.model.Transacao;
 import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.model.enums.TipoConta;
+import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
+import br.com.gerenciadorfinanceiro.repository.CategoriaRepository;
+import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.service.impl.TransferenciaServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -23,6 +31,12 @@ class TransferenciaServiceTest {
 
     @Mock
     private ContaService contaService;
+
+    @Mock
+    private TransacaoRepository transacaoRepository;
+
+    @Mock
+    private CategoriaRepository categoriaRepository;
 
     @InjectMocks
     private TransferenciaServiceImpl transferenciaService;
@@ -44,10 +58,12 @@ class TransferenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Deve debitar da conta origem e creditar na conta destino com sucesso")
+    @DisplayName("Deve debitar da conta origem, creditar na conta destino e registrar lançamentos espelhados no extrato")
     void deveTransferirComSucesso() {
         when(contaService.buscarEntidadePorId(10L, 1L)).thenReturn(contaOrigem);
         when(contaService.buscarEntidadePorId(20L, 1L)).thenReturn(contaDestino);
+        when(categoriaRepository.findByUsuarioId(1L)).thenReturn(Collections.emptyList());
+        when(categoriaRepository.save(any(Categoria.class))).thenAnswer(inv -> inv.getArgument(0));
 
         transferenciaService.transferir(1L, 10L, 20L, new BigDecimal("300.00"));
 
@@ -56,6 +72,23 @@ class TransferenciaServiceTest {
 
         verify(contaService).salvarEntidade(contaOrigem);
         verify(contaService).salvarEntidade(contaDestino);
+
+        ArgumentCaptor<Transacao> captor = ArgumentCaptor.forClass(Transacao.class);
+        verify(transacaoRepository, times(2)).save(captor.capture());
+
+        List<Transacao> lancamentos = captor.getAllValues();
+        Transacao saida = lancamentos.get(0);
+        Transacao entrada = lancamentos.get(1);
+
+        assertTrue(saida.isTransferenciaPatrimonial());
+        assertEquals(TipoTransacao.DESPESA, saida.getTipo());
+        assertEquals(contaOrigem, saida.getConta());
+        assertEquals(new BigDecimal("300.00"), saida.getValor());
+
+        assertTrue(entrada.isTransferenciaPatrimonial());
+        assertEquals(TipoTransacao.RECEITA, entrada.getTipo());
+        assertEquals(contaDestino, entrada.getConta());
+        assertEquals(new BigDecimal("300.00"), entrada.getValor());
     }
 
     @Test
@@ -68,6 +101,7 @@ class TransferenciaServiceTest {
                 transferenciaService.transferir(1L, 10L, 20L, new BigDecimal("1500.00")));
 
         verify(contaService, never()).salvarEntidade(any());
+        verify(transacaoRepository, never()).save(any());
     }
 
     @Test

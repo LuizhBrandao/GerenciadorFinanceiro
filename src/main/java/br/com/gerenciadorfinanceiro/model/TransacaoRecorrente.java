@@ -2,6 +2,8 @@ package br.com.gerenciadorfinanceiro.model;
 
 import br.com.gerenciadorfinanceiro.model.enums.FrequenciaRecorrencia;
 import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
+import br.com.gerenciadorfinanceiro.model.vo.DiaVencimento;
+import br.com.gerenciadorfinanceiro.model.vo.ValorMonetario;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,11 +17,11 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "transacoes_recorrentes")
 @Getter
-@Setter
 @NoArgsConstructor
 public class TransacaoRecorrente {
 
     @Id
+    @Setter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -76,10 +78,10 @@ public class TransacaoRecorrente {
                                Categoria categoria, LocalDate dataInicio, LocalDate dataFim, String observacao) {
         this.usuario = usuario;
         this.descricao = descricao;
-        this.valor = valor;
+        this.valor = ValorMonetario.ofPositivo(valor).quantia();
         this.tipo = tipo;
         this.frequencia = (frequencia != null) ? frequencia : FrequenciaRecorrencia.MENSAL;
-        this.diaVencimento = (diaVencimento != null) ? diaVencimento : 1;
+        this.diaVencimento = new DiaVencimento(diaVencimento != null ? Math.min(Math.max(diaVencimento, 1), 31) : 1).dia();
         this.conta = conta;
         this.categoria = categoria;
         this.dataInicio = (dataInicio != null) ? dataInicio : LocalDate.now();
@@ -106,5 +108,29 @@ public class TransacaoRecorrente {
         if (this.ativo == null) {
             this.ativo = true;
         }
+    }
+
+    public void atualizarPlano(String descricao, BigDecimal valor, TipoTransacao tipo,
+                               FrequenciaRecorrencia frequencia, Integer diaVencimento,
+                               Conta conta, Categoria categoria, LocalDate dataInicio,
+                               LocalDate dataFim, String observacao) {
+        this.descricao = descricao;
+        this.valor = ValorMonetario.ofPositivo(valor).quantia();
+        this.tipo = tipo;
+        this.frequencia = (frequencia != null) ? frequencia : FrequenciaRecorrencia.MENSAL;
+        this.diaVencimento = new DiaVencimento(diaVencimento != null ? Math.min(Math.max(diaVencimento, 1), 31) : 1).dia();
+        this.conta = conta;
+        this.categoria = categoria;
+        this.dataInicio = (dataInicio != null) ? dataInicio : LocalDate.now();
+        this.dataFim = dataFim;
+        this.observacao = observacao;
+    }
+
+    public void alternarAtivacao() {
+        this.ativo = !Boolean.TRUE.equals(this.ativo);
+    }
+
+    public void registrarUltimoLancamento(LocalDate dataLancamento) {
+        this.ultimoLancamento = dataLancamento;
     }
 }

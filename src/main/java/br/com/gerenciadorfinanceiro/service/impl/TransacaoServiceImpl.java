@@ -143,14 +143,16 @@ public class TransacaoServiceImpl implements TransacaoService {
         Categoria novaCategoria = categoriaService.buscarEntidadePorId(request.categoriaId(), usuarioId);
         StatusTransacao novoStatus = request.status() != null ? request.status() : StatusTransacao.PAGA;
 
-        existente.setDescricao(request.descricao());
-        existente.setValor(ValorMonetario.ofPositivo(request.valor()).quantia());
-        existente.setTipo(request.tipo());
-        existente.setStatus(novoStatus);
-        existente.setDataTransacao(request.dataTransacao());
-        existente.setConta(novaConta);
-        existente.setCategoria(novaCategoria);
-        existente.setObservacao(request.observacao());
+        existente.retificar(
+                request.descricao(),
+                request.valor(),
+                request.tipo(),
+                novoStatus,
+                request.dataTransacao(),
+                novaConta,
+                novaCategoria,
+                request.observacao()
+        );
 
         // Se o novo status é PAGA, debita/credita na nova conta
         if (novoStatus == StatusTransacao.PAGA) {
@@ -218,7 +220,7 @@ public class TransacaoServiceImpl implements TransacaoService {
     public TransacaoResponseDto efetivar(Long id, Long usuarioId) {
         Transacao transacao = buscarEntidadePorId(id, usuarioId);
         if (transacao.getStatus() != StatusTransacao.PAGA) {
-            transacao.setStatus(StatusTransacao.PAGA);
+            transacao.liquidar();
             if (transacao.getConta() != null) {
                 atualizarSaldoConta(transacao.getConta(), transacao.getTipo(), transacao.getValor(), false);
             }
