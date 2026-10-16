@@ -98,4 +98,28 @@ public final class DtoMapper {
                 r.getObservacao()
         );
     }
+
+    public static br.com.gerenciadorfinanceiro.controller.dto.OrcamentoResponseDto toOrcamentoResponse(
+            br.com.gerenciadorfinanceiro.model.Orcamento o, java.math.BigDecimal valorGasto) {
+        if (o == null) return null;
+        java.math.BigDecimal gasto = valorGasto != null ? valorGasto : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal percentual = java.math.BigDecimal.ZERO;
+        if (o.getValorLimite() != null && o.getValorLimite().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            percentual = gasto.multiply(java.math.BigDecimal.valueOf(100))
+                    .divide(o.getValorLimite(), 2, java.math.RoundingMode.HALF_UP);
+        }
+        boolean ultrapassado = o.ultrapassouLimite(gasto);
+
+        return new br.com.gerenciadorfinanceiro.controller.dto.OrcamentoResponseDto(
+                o.getId(),
+                toCategoriaResponse(o.getCategoria()),
+                o.getAno(),
+                o.getMes(),
+                o.getValorLimite(),
+                gasto,
+                percentual,
+                ultrapassado,
+                o.getObservacao()
+        );
+    }
 }

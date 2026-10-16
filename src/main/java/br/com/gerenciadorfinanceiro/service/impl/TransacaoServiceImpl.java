@@ -6,11 +6,13 @@ import br.com.gerenciadorfinanceiro.controller.mapper.DtoMapper;
 import br.com.gerenciadorfinanceiro.exception.EntidadeNaoEncontradaException;
 import br.com.gerenciadorfinanceiro.model.Categoria;
 import br.com.gerenciadorfinanceiro.model.Conta;
+import br.com.gerenciadorfinanceiro.model.Tag;
 import br.com.gerenciadorfinanceiro.model.Transacao;
 import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.model.enums.StatusTransacao;
 import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
 import br.com.gerenciadorfinanceiro.model.vo.ValorMonetario;
+import br.com.gerenciadorfinanceiro.repository.TagRepository;
 import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.repository.spec.TransacaoSpecs;
 import br.com.gerenciadorfinanceiro.service.CategoriaService;
@@ -24,7 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +37,7 @@ import java.util.stream.Collectors;
 public class TransacaoServiceImpl implements TransacaoService {
 
     private final TransacaoRepository transacaoRepository;
+    private final TagRepository tagRepository;
     private final ContaService contaService;
     private final CategoriaService categoriaService;
 
@@ -105,6 +111,7 @@ public class TransacaoServiceImpl implements TransacaoService {
                 categoria,
                 request.observacao()
         );
+        transacao.definirTags(processarTags(request.tags(), usuario));
 
         if (transacao.getStatus() == StatusTransacao.PAGA) {
             atualizarSaldoConta(conta, transacao.getTipo(), transacao.getValor(), false);
@@ -153,6 +160,7 @@ public class TransacaoServiceImpl implements TransacaoService {
                 novaCategoria,
                 request.observacao()
         );
+        existente.definirTags(processarTags(request.tags(), existente.getUsuario()));
 
         // Se o novo status é PAGA, debita/credita na nova conta
         if (novoStatus == StatusTransacao.PAGA) {
@@ -182,6 +190,7 @@ public class TransacaoServiceImpl implements TransacaoService {
 
         Conta conta = contaService.buscarEntidadePorId(request.contaId(), usuario.getId());
         Categoria categoria = categoriaService.buscarEntidadePorId(request.categoriaId(), usuario.getId());
+        Set<Tag> tags = processarTags(request.tags(), usuario);
 
         List<Transacao> parcelas = new ArrayList<>(quantidadeParcelas);
 
@@ -202,6 +211,7 @@ public class TransacaoServiceImpl implements TransacaoService {
                     categoria,
                     request.observacao()
             );
+            parcela.definirTags(tags);
 
             if (status == StatusTransacao.PAGA) {
                 atualizarSaldoConta(conta, parcela.getTipo(), parcela.getValor(), false);
@@ -213,6 +223,22 @@ public class TransacaoServiceImpl implements TransacaoService {
         return parcelas.stream()
                 .map(DtoMapper::toTransacaoResponse)
                 .collect(Collectors.toList());
+    }
+
+    private Set<Tag> processarTags(Set<String> nomesTags, Usuario usuario) {
+        if (nomesTags == null || nomesTags.isEmpty()) {
+            return Collections.emptySet();
+        }
+        Set<Tag> tags = new HashSet<>();
+        for (String nome : nomesTags) {
+            if (nome != null && !nome.isBlank()) {
+                String nomeLimpo = nome.trim();
+                Tag tag = tagRepository.findByUsuarioIdAndNomeIgnoreCase(usuario.getId(), nomeLimpo)
+                        .orElseGet(() -> tagRepository.save(new Tag(usuario, nomeLimpo)));
+                tags.add(tag);
+            }
+        }
+        return tags;
     }
 
     @Override

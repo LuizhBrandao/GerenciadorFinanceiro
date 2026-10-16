@@ -93,7 +93,8 @@ class TransacaoRecorrenteServiceTest {
         when(contaService.buscarEntidadePorId(eq(10L), eq(1L))).thenReturn(conta);
         when(categoriaService.buscarEntidadePorId(eq(20L), eq(1L))).thenReturn(categoria);
         when(transacaoRecorrenteRepository.save(any(TransacaoRecorrente.class))).thenReturn(recSalva);
-        when(transacaoRepository.findByUsuarioId(eq(1L))).thenReturn(new ArrayList<>());
+        when(transacaoRepository.findByRecorrenciaId(any())).thenReturn(new ArrayList<>());
+        when(transacaoRepository.findByUsuarioIdAndRecorrenciaIsNullAndDescricaoIgnoreCase(any(), any())).thenReturn(new ArrayList<>());
         when(transacaoService.salvarEntidade(any(Transacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         RecorrenciaResponseDto resultado = recorrenteService.salvar(request, usuario);
@@ -101,5 +102,51 @@ class TransacaoRecorrenteServiceTest {
         assertNotNull(resultado);
         // Deve ter gerado 12 transações (Janeiro a Dezembro de 2026)
         verify(transacaoService, times(12)).salvarEntidade(any(Transacao.class));
+    }
+
+    @Test
+    @DisplayName("Deve sincronizar transações vinculadas à recorrência por recorrencia_id")
+    void deveSincronizarTransacoesPorRecorrenciaId() {
+        RecorrenciaRequestDto updateRequest = new RecorrenciaRequestDto(
+                "VIVO FIBRA NOVO",
+                BigDecimal.valueOf(180),
+                TipoTransacao.DESPESA,
+                FrequenciaRecorrencia.MENSAL,
+                15,
+                10L,
+                20L,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 12, 31),
+                "Upgrade de plano"
+        );
+
+        TransacaoRecorrente existente = new TransacaoRecorrente(
+                usuario, "VIVO", BigDecimal.valueOf(150), TipoTransacao.DESPESA,
+                FrequenciaRecorrencia.MENSAL, 10, conta, categoria,
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), "Internet"
+        );
+        existente.setId(100L);
+
+        Transacao tPendente = new Transacao(
+                usuario, "VIVO", BigDecimal.valueOf(150), TipoTransacao.DESPESA,
+                br.com.gerenciadorfinanceiro.model.enums.StatusTransacao.PENDENTE,
+                LocalDate.of(2026, 6, 10), conta, categoria, "Internet"
+        );
+        tPendente.vincularRecorrencia(existente);
+
+        when(transacaoRecorrenteRepository.findByIdAndUsuarioId(eq(100L), eq(1L))).thenReturn(java.util.Optional.of(existente));
+        when(contaService.buscarEntidadePorId(eq(10L), eq(1L))).thenReturn(conta);
+        when(categoriaService.buscarEntidadePorId(eq(20L), eq(1L))).thenReturn(categoria);
+        when(transacaoRecorrenteRepository.save(any(TransacaoRecorrente.class))).thenReturn(existente);
+        when(transacaoRepository.findByRecorrenciaId(eq(100L))).thenReturn(java.util.List.of(tPendente));
+        when(transacaoRepository.findByUsuarioIdAndRecorrenciaIsNullAndDescricaoIgnoreCase(any(), any())).thenReturn(new ArrayList<>());
+        when(transacaoService.salvarEntidade(any(Transacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RecorrenciaResponseDto resultado = recorrenteService.atualizar(100L, updateRequest, 1L);
+
+        assertNotNull(resultado);
+        verify(transacaoRepository).save(tPendente);
+        org.junit.jupiter.api.Assertions.assertEquals("VIVO FIBRA NOVO", tPendente.getDescricao());
+        org.junit.jupiter.api.Assertions.assertEquals(new BigDecimal("180.00"), tPendente.getValor());
     }
 }

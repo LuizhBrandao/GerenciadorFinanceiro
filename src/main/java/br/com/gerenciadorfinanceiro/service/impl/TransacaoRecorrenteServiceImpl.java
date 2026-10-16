@@ -230,17 +230,27 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
     }
 
     private void sincronizarTransacoesDaRecorrencia(TransacaoRecorrente rec, String descricaoAntiga) {
-        List<Transacao> transacoes = transacaoRepository.findByUsuarioId(rec.getUsuario().getId());
+        List<Transacao> associadas = new ArrayList<>(transacaoRepository.findByRecorrenciaId(rec.getId()));
 
-        for (Transacao t : transacoes) {
-            boolean pertence = (t.getRecorrencia() != null && t.getRecorrencia().getId().equals(rec.getId()))
-                    || (t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()))
-                    || (descricaoAntiga != null && t.getDescricao().trim().equalsIgnoreCase(descricaoAntiga.trim()));
+        List<Transacao> legadas = transacaoRepository.findByUsuarioIdAndRecorrenciaIsNullAndDescricaoIgnoreCase(
+                rec.getUsuario().getId(), rec.getDescricao());
+        for (Transacao legada : legadas) {
+            legada.vincularRecorrencia(rec);
+            associadas.add(legada);
+        }
 
-            if (pertence) {
-                t.sincronizarComRecorrencia(rec);
-                transacaoRepository.save(t);
+        if (descricaoAntiga != null && !descricaoAntiga.trim().equalsIgnoreCase(rec.getDescricao().trim())) {
+            List<Transacao> legadasAntigas = transacaoRepository.findByUsuarioIdAndRecorrenciaIsNullAndDescricaoIgnoreCase(
+                    rec.getUsuario().getId(), descricaoAntiga.trim());
+            for (Transacao legada : legadasAntigas) {
+                legada.vincularRecorrencia(rec);
+                associadas.add(legada);
             }
+        }
+
+        for (Transacao t : associadas) {
+            t.sincronizarComRecorrencia(rec);
+            transacaoRepository.save(t);
         }
     }
 
@@ -261,7 +271,14 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
         List<Transacao> geradas = new ArrayList<>();
         LocalDate cursor = inicio;
 
-        List<Transacao> existentes = transacaoRepository.findByUsuarioId(rec.getUsuario().getId());
+        List<Transacao> existentes = new ArrayList<>(transacaoRepository.findByRecorrenciaId(rec.getId()));
+        List<Transacao> legadas = transacaoRepository.findByUsuarioIdAndRecorrenciaIsNullAndDescricaoIgnoreCase(
+                rec.getUsuario().getId(), rec.getDescricao());
+        for (Transacao legada : legadas) {
+            legada.vincularRecorrencia(rec);
+            transacaoRepository.save(legada);
+            existentes.add(legada);
+        }
 
         if (freq == FrequenciaRecorrencia.MENSAL) {
             LocalDate mesAtual = LocalDate.of(inicio.getYear(), inicio.getMonth(), 1);
@@ -274,16 +291,18 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
 
                 if (!dataAlvo.isBefore(inicio) && !dataAlvo.isAfter(fim)) {
                     boolean jaExiste = existentes.stream().anyMatch(t ->
-                            t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
-                                    t.getDataTransacao().getYear() == dataAlvo.getYear() &&
-                                    t.getDataTransacao().getMonth() == dataAlvo.getMonth()
+                            t != null && t.getDataTransacao() != null &&
+                            t.getDataTransacao().getYear() == dataAlvo.getYear() &&
+                            t.getDataTransacao().getMonth() == dataAlvo.getMonth()
                     );
 
                     if (!jaExiste) {
                         StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
                         Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
-                        geradas.add(t);
-                        existentes.add(t);
+                        if (t != null) {
+                            geradas.add(t);
+                            existentes.add(t);
+                        }
                     }
                 }
                 mesAtual = mesAtual.plusMonths(1);
@@ -291,10 +310,7 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
         } else if (freq == FrequenciaRecorrencia.SEMANAL) {
             while (!cursor.isAfter(fim)) {
                 final LocalDate dataAlvo = cursor;
-                boolean jaExiste = existentes.stream().anyMatch(t ->
-                        t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
-                                t.getDataTransacao().equals(dataAlvo)
-                );
+                boolean jaExiste = existentes.stream().anyMatch(t -> t.getDataTransacao().equals(dataAlvo));
                 if (!jaExiste) {
                     StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
                     Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
@@ -306,10 +322,7 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
         } else if (freq == FrequenciaRecorrencia.QUINZENAL) {
             while (!cursor.isAfter(fim)) {
                 final LocalDate dataAlvo = cursor;
-                boolean jaExiste = existentes.stream().anyMatch(t ->
-                        t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
-                                t.getDataTransacao().equals(dataAlvo)
-                );
+                boolean jaExiste = existentes.stream().anyMatch(t -> t.getDataTransacao().equals(dataAlvo));
                 if (!jaExiste) {
                     StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
                     Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
@@ -322,10 +335,7 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
             LocalDate anoCursor = inicio;
             while (!anoCursor.isAfter(fim)) {
                 final LocalDate dataAlvo = anoCursor;
-                boolean jaExiste = existentes.stream().anyMatch(t ->
-                        t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
-                                t.getDataTransacao().getYear() == dataAlvo.getYear()
-                );
+                boolean jaExiste = existentes.stream().anyMatch(t -> t.getDataTransacao().getYear() == dataAlvo.getYear());
                 if (!jaExiste) {
                     StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
                     Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
@@ -337,10 +347,7 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
         } else if (freq == FrequenciaRecorrencia.DIARIA) {
             while (!cursor.isAfter(fim)) {
                 final LocalDate dataAlvo = cursor;
-                boolean jaExiste = existentes.stream().anyMatch(t ->
-                        t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()) &&
-                                t.getDataTransacao().equals(dataAlvo)
-                );
+                boolean jaExiste = existentes.stream().anyMatch(t -> t.getDataTransacao().equals(dataAlvo));
                 if (!jaExiste) {
                     StatusTransacao status = dataAlvo.isBefore(hoje) ? StatusTransacao.PAGA : StatusTransacao.PENDENTE;
                     Transacao t = criarEGravarTransacao(rec, dataAlvo, status);
@@ -352,7 +359,6 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
         }
 
         LocalDate ultimoAteHoje = existentes.stream()
-                .filter(t -> t.getDescricao().trim().equalsIgnoreCase(rec.getDescricao().trim()))
                 .map(Transacao::getDataTransacao)
                 .filter(d -> d != null && !d.isAfter(hoje))
                 .max(LocalDate::compareTo)

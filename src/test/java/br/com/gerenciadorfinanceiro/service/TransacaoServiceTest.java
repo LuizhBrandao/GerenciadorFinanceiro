@@ -9,6 +9,7 @@ import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.model.enums.StatusTransacao;
 import br.com.gerenciadorfinanceiro.model.enums.TipoConta;
 import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
+import br.com.gerenciadorfinanceiro.repository.TagRepository;
 import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.service.impl.TransacaoServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,9 @@ class TransacaoServiceTest {
 
     @Mock
     private TransacaoRepository transacaoRepository;
+
+    @Mock
+    private TagRepository tagRepository;
 
     @Mock
     private ContaService contaService;
@@ -152,5 +156,36 @@ class TransacaoServiceTest {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         assertEquals(new BigDecimal("100.00"), somaTotal);
         assertEquals(new BigDecimal("966.66"), conta.getSaldo());
+    }
+
+    @Test
+    @DisplayName("Deve salvar transação e associar tags corretamente")
+    void deveSalvarTransacaoComTagsAssociadas() {
+        TransacaoRequestDto request = new TransacaoRequestDto(
+                "Restaurante",
+                new BigDecimal("150.00"),
+                TipoTransacao.DESPESA,
+                StatusTransacao.PAGA,
+                LocalDate.now(),
+                10L,
+                20L,
+                "Jantar",
+                java.util.Set.of("Alimentação", "FimDeSemana")
+        );
+
+        when(contaService.buscarEntidadePorId(10L, 1L)).thenReturn(conta);
+        when(categoriaService.buscarEntidadePorId(20L, 1L)).thenReturn(categoria);
+        when(tagRepository.findByUsuarioIdAndNomeIgnoreCase(eq(1L), anyString())).thenReturn(java.util.Optional.empty());
+        when(tagRepository.save(any(br.com.gerenciadorfinanceiro.model.Tag.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(transacaoRepository.save(any(Transacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TransacaoResponseDto response = transacaoService.salvar(request, usuario);
+
+        assertNotNull(response);
+        assertEquals(2, response.tags().size());
+        assertTrue(response.tags().contains("Alimentação"));
+        assertTrue(response.tags().contains("FimDeSemana"));
+        verify(tagRepository, times(2)).save(any(br.com.gerenciadorfinanceiro.model.Tag.class));
     }
 }
