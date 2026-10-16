@@ -41,7 +41,38 @@ public class Categoria {
         this.nome = nome;
         this.tipo = tipo;
         this.descricao = descricao;
-        this.icone = icone;
+        this.icone = (icone != null && !icone.isBlank()) ? icone : "fa-tag";
+    }
+
+    public static java.util.List<Categoria> criarCatalogoPadrao(Usuario usuario) {
+        return java.util.List.of(
+                new Categoria(usuario, "Salário e Remuneração", TipoTransacao.RECEITA,
+                        "Salário fixo mensal, adiantamentos, 13º salário e benefícios em folha.", "fa-briefcase"),
+                new Categoria(usuario, "Rendimentos & Investimentos", TipoTransacao.RECEITA,
+                        "Dividendos, juros sobre capital próprio (JCP), rendimentos de CDI/Poupança e fundos imobiliários.", "fa-chart-line"),
+                new Categoria(usuario, "Freelance & Serviços Extras", TipoTransacao.RECEITA,
+                        "Trabalhos autônomos, consultorias, projetos paralelos e vendas pontuais.", "fa-laptop"),
+                new Categoria(usuario, "Moradia & Habitação", TipoTransacao.DESPESA,
+                        "Aluguel, condomínio, IPTU, contas essenciais (energia elétrica, água, gás, internet).", "fa-house"),
+                new Categoria(usuario, "Alimentação & Supermercado", TipoTransacao.DESPESA,
+                        "Compras de supermercado, feira, açougue, padaria e delivery/refeições do dia a dia.", "fa-utensils"),
+                new Categoria(usuario, "Transporte & Mobilidade", TipoTransacao.DESPESA,
+                        "Combustível, transporte público, corridas por aplicativo (Uber/99), estacionamento, IPVA e manutenção veicular.", "fa-car"),
+                new Categoria(usuario, "Saúde & Bem-Estar", TipoTransacao.DESPESA,
+                        "Plano de saúde, consultas, farmácia/medicamentos, exames e academia/atividades físicas.", "fa-heart-pulse"),
+                new Categoria(usuario, "Educação & Desenvolvimento", TipoTransacao.DESPESA,
+                        "Mensalidades escolares/faculdade, cursos online, livros, certificações e workshops.", "fa-graduation-cap"),
+                new Categoria(usuario, "Lazer & Entretenimento", TipoTransacao.DESPESA,
+                        "Assinaturas de streaming (Netflix, Spotify), restaurantes/bares, viagens, cinema e passeios.", "fa-ticket"),
+                new Categoria(usuario, "Cuidados Pessoais & Compras", TipoTransacao.DESPESA,
+                        "Roupas, calçados, barbearia/salão de beleza, cosméticos e itens de uso pessoal.", "fa-bag-shopping"),
+                new Categoria(usuario, "Contas Básicas & Energia", TipoTransacao.DESPESA,
+                        "Contas de energia, água, luz, gás e taxas.", "fa-bolt"),
+                new Categoria(usuario, "Outros", TipoTransacao.DESPESA,
+                        "Outros gastos e despesas gerais.", "fa-tag"),
+                new Categoria(usuario, "Outras Receitas", TipoTransacao.RECEITA,
+                        "Outras entradas e ganhos gerais.", "fa-tag")
+        );
     }
 }
 

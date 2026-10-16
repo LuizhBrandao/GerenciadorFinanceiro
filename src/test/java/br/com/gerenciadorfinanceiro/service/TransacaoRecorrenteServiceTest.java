@@ -63,7 +63,7 @@ class TransacaoRecorrenteServiceTest {
         conta = new Conta(usuario, "Principal", "Banco", TipoConta.CORRENTE, BigDecimal.valueOf(5000));
         conta.setId(10L);
 
-        categoria = new Categoria(usuario, "Contas Básicas", TipoTransacao.DESPESA, "fa-bolt", "Luz e Net");
+        categoria = new Categoria(usuario, "Contas Básicas", TipoTransacao.DESPESA, "Luz e Net", "fa-bolt");
         categoria.setId(20L);
     }
 

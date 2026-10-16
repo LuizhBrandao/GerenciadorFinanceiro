@@ -1,6 +1,5 @@
 package br.com.gerenciadorfinanceiro.service.impl;
 
-import br.com.gerenciadorfinanceiro.config.DataInitializer;
 import br.com.gerenciadorfinanceiro.controller.dto.CategoriaRequestDto;
 import br.com.gerenciadorfinanceiro.controller.dto.CategoriaResponseDto;
 import br.com.gerenciadorfinanceiro.controller.mapper.DtoMapper;
@@ -23,7 +22,7 @@ public class CategoriaServiceImpl implements CategoriaService {
     private final CategoriaRepository categoriaRepository;
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<CategoriaResponseDto> listar(Long usuarioId) {
         List<Categoria> categorias = categoriaRepository.findByUsuarioId(usuarioId);
         return categorias.stream()
@@ -52,8 +51,8 @@ public class CategoriaServiceImpl implements CategoriaService {
                 usuario,
                 request.nome(),
                 request.tipo(),
-                icone,
-                request.descricao()
+                request.descricao(),
+                icone
         );
         Categoria salva = categoriaRepository.save(categoria);
         return DtoMapper.toCategoriaResponse(salva);
@@ -64,7 +63,7 @@ public class CategoriaServiceImpl implements CategoriaService {
     public List<CategoriaResponseDto> inicializarCategoriasPadrao(Usuario usuario) {
         List<Categoria> existentes = categoriaRepository.findByUsuarioId(usuario.getId());
         if (existentes.isEmpty()) {
-            List<Categoria> padrao = DataInitializer.criarCategoriasPadraoParaUsuario(usuario);
+            List<Categoria> padrao = Categoria.criarCatalogoPadrao(usuario);
             List<Categoria> salvas = categoriaRepository.saveAll(padrao);
             return salvas.stream()
                     .map(DtoMapper::toCategoriaResponse)

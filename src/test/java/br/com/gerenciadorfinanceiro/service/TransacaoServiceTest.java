@@ -54,7 +54,7 @@ class TransacaoServiceTest {
         conta = new Conta(usuario, "Conta Corrente", "Banco", TipoConta.CORRENTE, new BigDecimal("1000.00"));
         conta.setId(10L);
 
-        categoria = new Categoria(usuario, "Alimentação", TipoTransacao.DESPESA, "fa-utensils", "Mercado");
+        categoria = new Categoria(usuario, "Alimentação", TipoTransacao.DESPESA, "Mercado", "fa-utensils");
         categoria.setId(20L);
     }
 
@@ -119,5 +119,38 @@ class TransacaoServiceTest {
         assertEquals(3, parcelas.size());
         assertEquals(new BigDecimal("1000.00"), parcelas.get(0).valor());
         verify(transacaoRepository, times(3)).save(any(Transacao.class));
+    }
+
+    @Test
+    @DisplayName("Deve alocar centavo residual na 1ª parcela quando divisão não for exata (R$ 100,00 em 3x)")
+    void deveAlocarResiduoDeCentavosNaPrimeiraParcela() {
+        TransacaoRequestDto request = new TransacaoRequestDto(
+                "Compra Parcelada",
+                new BigDecimal("100.00"),
+                TipoTransacao.DESPESA,
+                StatusTransacao.PAGA,
+                LocalDate.of(2026, 3, 10),
+                10L,
+                20L,
+                "Teste de centavos",
+                null
+        );
+
+        when(contaService.buscarEntidadePorId(10L, 1L)).thenReturn(conta);
+        when(categoriaService.buscarEntidadePorId(20L, 1L)).thenReturn(categoria);
+        when(transacaoRepository.save(any(Transacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<TransacaoResponseDto> parcelas = transacaoService.criarParcelamento(request, 3, usuario);
+
+        assertEquals(3, parcelas.size());
+        assertEquals(new BigDecimal("33.34"), parcelas.get(0).valor());
+        assertEquals(new BigDecimal("33.33"), parcelas.get(1).valor());
+        assertEquals(new BigDecimal("33.33"), parcelas.get(2).valor());
+
+        BigDecimal somaTotal = parcelas.stream()
+                .map(TransacaoResponseDto::valor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertEquals(new BigDecimal("100.00"), somaTotal);
+        assertEquals(new BigDecimal("966.66"), conta.getSaldo());
     }
 }

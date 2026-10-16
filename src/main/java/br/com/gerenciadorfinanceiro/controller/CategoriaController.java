@@ -21,11 +21,7 @@ public class CategoriaController {
 
     @GetMapping
     public ResponseEntity<List<CategoriaResponseDto>> listar(@AuthenticationPrincipal Usuario usuario) {
-        List<CategoriaResponseDto> categorias = categoriaService.listar(usuario.getId());
-        if (categorias.isEmpty()) {
-            categorias = categoriaService.inicializarCategoriasPadrao(usuario);
-        }
-        return ResponseEntity.ok(categorias);
+        return ResponseEntity.ok(categoriaService.listar(usuario.getId()));
     }
 
     @PostMapping("/inicializar-padrao")

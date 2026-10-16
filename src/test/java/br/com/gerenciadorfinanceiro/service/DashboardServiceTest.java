@@ -51,10 +51,10 @@ class DashboardServiceTest {
         conta = new Conta(usuario, "Conta Corrente", "Banco", TipoConta.CORRENTE, BigDecimal.valueOf(2000));
         conta.setId(10L);
 
-        catAlimentacao = new Categoria(usuario, "Alimentação", TipoTransacao.DESPESA, "fa-utensils", "Mercado e Refeições");
+        catAlimentacao = new Categoria(usuario, "Alimentação", TipoTransacao.DESPESA, "Mercado e Refeições", "fa-utensils");
         catAlimentacao.setId(100L);
 
-        catSalario = new Categoria(usuario, "Salário", TipoTransacao.RECEITA, "fa-briefcase", "Renda Mensal");
+        catSalario = new Categoria(usuario, "Salário", TipoTransacao.RECEITA, "Renda Mensal", "fa-briefcase");
         catSalario.setId(200L);
     }
 

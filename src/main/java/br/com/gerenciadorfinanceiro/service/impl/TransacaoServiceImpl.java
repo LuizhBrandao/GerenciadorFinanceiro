@@ -10,6 +10,7 @@ import br.com.gerenciadorfinanceiro.model.Transacao;
 import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.model.enums.StatusTransacao;
 import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
+import br.com.gerenciadorfinanceiro.model.vo.ValorMonetario;
 import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.repository.spec.TransacaoSpecs;
 import br.com.gerenciadorfinanceiro.service.CategoriaService;
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -97,7 +97,7 @@ public class TransacaoServiceImpl implements TransacaoService {
         Transacao transacao = new Transacao(
                 usuario,
                 request.descricao(),
-                request.valor(),
+                ValorMonetario.ofPositivo(request.valor()).quantia(),
                 request.tipo(),
                 status,
                 request.dataTransacao(),
@@ -144,7 +144,7 @@ public class TransacaoServiceImpl implements TransacaoService {
         StatusTransacao novoStatus = request.status() != null ? request.status() : StatusTransacao.PAGA;
 
         existente.setDescricao(request.descricao());
-        existente.setValor(request.valor());
+        existente.setValor(ValorMonetario.ofPositivo(request.valor()).quantia());
         existente.setTipo(request.tipo());
         existente.setStatus(novoStatus);
         existente.setDataTransacao(request.dataTransacao());
@@ -176,22 +176,18 @@ public class TransacaoServiceImpl implements TransacaoService {
     @Override
     @Transactional
     public List<TransacaoResponseDto> criarParcelamento(TransacaoRequestDto request, int quantidadeParcelas, Usuario usuario) {
-        if (quantidadeParcelas <= 0) {
-            throw new IllegalArgumentException("A quantidade de parcelas deve ser de no mínimo 1.");
-        }
+        List<ValorMonetario> valoresParcelas = ValorMonetario.ofPositivo(request.valor()).parcelar(quantidadeParcelas);
 
         Conta conta = contaService.buscarEntidadePorId(request.contaId(), usuario.getId());
         Categoria categoria = categoriaService.buscarEntidadePorId(request.categoriaId(), usuario.getId());
 
-        BigDecimal valorTotal = request.valor();
-        BigDecimal valorParcela = valorTotal.divide(BigDecimal.valueOf(quantidadeParcelas), 2, RoundingMode.HALF_UP);
-
-        List<Transacao> parcelas = new ArrayList<>();
+        List<Transacao> parcelas = new ArrayList<>(quantidadeParcelas);
 
         for (int i = 0; i < quantidadeParcelas; i++) {
             String descricaoParcela = request.descricao() + " (Parcela " + (i + 1) + "/" + quantidadeParcelas + ")";
             StatusTransacao status = (i == 0 && request.status() != null) ? request.status() : StatusTransacao.PENDENTE;
             LocalDate dataParcela = request.dataTransacao().plusMonths(i);
+            BigDecimal valorParcela = valoresParcelas.get(i).quantia();
 
             Transacao parcela = new Transacao(
                     usuario,
