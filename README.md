@@ -1,4 +1,4 @@
-# 💰 Gerenciador Financeiro Pessoal
+#  Gerenciador Financeiro Pessoal
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg?style=flat&logo=openjdk)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen.svg?style=flat&logo=springboot)](https://spring.io/projects/spring-boot)
@@ -12,7 +12,7 @@ Aplicação Full-Stack completa para controle financeiro pessoal, desenvolvida c
 
 ---
 
-## 📑 Sumário
+##  Sumário
 
 - [Visão Geral & Arquitetura](#-visão-geral--arquitetura)
 - [Wiki de Engenharia DDD](#-wiki-de-engenharia-ddd)
@@ -28,7 +28,7 @@ Aplicação Full-Stack completa para controle financeiro pessoal, desenvolvida c
 
 ---
 
-## 🏛 Visão Geral & Arquitetura
+##  Visão Geral & Arquitetura
 
 O sistema adota o padrão de arquitetura em 4 camadas (**Domain-Driven Design**) no backend e uma **SPA modular** no frontend:
 
@@ -61,19 +61,19 @@ O sistema adota o padrão de arquitetura em 4 camadas (**Domain-Driven Design**)
 
 ---
 
-## 📖 Wiki de Engenharia DDD
+##  Wiki de Engenharia DDD
 
 A documentação detalhada de requisitos, modelagem de domínio e governança técnica está centralizada na [**Wiki do Projeto (docs/wiki/)**](docs/wiki/README.md):
 
-* 🧭 [**1. Visão Geral, Diagnóstico de Riscos e Anatomia da Solução**](docs/wiki/visao_geral_e_dominio.md): Matriz dos 4 Grandes Riscos de Marty Cagan, Personas, AS IS vs. TO BE e Requisitos.
-* 🗣 [**2. Dicionário da Linguagem Ubíqua e Contextos Delimitados**](docs/wiki/linguagem_ubiqua.md): Vocabulário oficial e Context Map entre Identidade, Contas, Transações e Orçamentos.
-* 🧩 [**3. Arquitetura e Design Tático DDD**](docs/wiki/arquitetura_e_design_tatico.md): 4 camadas, Value Objects, Comandos de Agregados, Optimistic Locking (`@Version`) e desativação do OSIV (`open-in-view: false`).
-* ⚡ [**4. Domain Storytelling e Event Storming**](docs/wiki/event_storming_e_fluxos.md): Narrativas de negócios, eventos de domínio, políticas e mitigação de hotspots.
-* 🔌 [**5. Contratos de API REST e Tratamento de Exceções**](docs/wiki/api_e_contratos.md): Especificação dos endpoints, DTOs e códigos de erro (HTTP 400, 404, 409, 422).
+*  [**1. Visão Geral, Diagnóstico de Riscos e Anatomia da Solução**](docs/wiki/visao_geral_e_dominio.md): Matriz dos 4 Grandes Riscos de Marty Cagan, Personas, AS IS vs. TO BE e Requisitos.
+*  [**2. Dicionário da Linguagem Ubíqua e Contextos Delimitados**](docs/wiki/linguagem_ubiqua.md): Vocabulário oficial e Context Map entre Identidade, Contas, Transações e Orçamentos.
+*  [**3. Arquitetura e Design Tático DDD**](docs/wiki/arquitetura_e_design_tatico.md): 4 camadas, Value Objects, Comandos de Agregados, Optimistic Locking (`@Version`) e desativação do OSIV (`open-in-view: false`).
+*  [**4. Domain Storytelling e Event Storming**](docs/wiki/event_storming_e_fluxos.md): Narrativas de negócios, eventos de domínio, políticas e mitigação de hotspots.
+*  [**5. Contratos de API REST e Tratamento de Exceções**](docs/wiki/api_e_contratos.md): Especificação dos endpoints, DTOs e códigos de erro (HTTP 400, 404, 409, 422).
 
 ---
 
-## ✨ Funcionalidades Principais
+##  Funcionalidades Principais
 
 ### 1. Autenticação & Segurança Desacoplada
 - Cadastro e login de usuários gerenciados pela camada de aplicação (`AuthService`) com senhas criptografadas via **BCrypt**.
@@ -114,7 +114,7 @@ A documentação detalhada de requisitos, modelagem de domínio e governança t�
 
 ---
 
-## 🛠 Tecnologias Utilizadas
+##  Tecnologias Utilizadas
 
 ### Backend
 - **Java 21**
@@ -142,7 +142,7 @@ A documentação detalhada de requisitos, modelagem de domínio e governança t�
 
 ---
 
-## 📂 Estrutura do Projeto
+##  Estrutura do Projeto
 
 ```
 Gerenciador Financeiro/
@@ -178,7 +178,7 @@ Gerenciador Financeiro/
 
 ---
 
-## ⚙ Pré-requisitos
+##  Pré-requisitos
 
 Antes de iniciar, certifique-se de ter instalado em sua máquina:
 - [JDK 21+](https://www.oracle.com/java/technologies/downloads/#java21)
@@ -187,7 +187,7 @@ Antes de iniciar, certifique-se de ter instalado em sua máquina:
 
 ---
 
-## 🚀 Como Executar a Aplicação
+##  Como Executar a Aplicação
 
 ### 1. Clonar o repositório
 ```bash
@@ -216,7 +216,7 @@ O servidor iniciará em `http://localhost:8080`.
 
 ---
 
-## 📚 Documentação da API (Swagger / OpenAPI)
+##  Documentação da API (Swagger / OpenAPI)
 
 Com a aplicação em execução, acesse a documentação interativa do Swagger UI:
 - **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
@@ -224,7 +224,7 @@ Com a aplicação em execução, acesse a documentação interativa do Swagger U
 
 ---
 
-## 🔗 Endpoints da API REST
+##  Endpoints da API REST
 
 | Módulo | Método | Endpoint | Descrição | Autenticação |
 | :--- | :--- | :--- | :--- | :--- |
@@ -265,7 +265,7 @@ Com a aplicação em execução, acesse a documentação interativa do Swagger U
 
 ---
 
-## 🧪 Testes Automatizados
+##  Testes Automatizados
 
 A aplicação conta com uma suíte de **30 testes unitários automatizados** cobrindo Value Objects, Agregados, Regras de Negócio e Casos de Uso:
 
@@ -281,6 +281,6 @@ Saída esperada:
 
 ---
 
-## 👨‍💻 Autor
+##  Autor
 
 Desenvolvido por **[Luiz Brandão](https://github.com/LuizhBrandao)**.
