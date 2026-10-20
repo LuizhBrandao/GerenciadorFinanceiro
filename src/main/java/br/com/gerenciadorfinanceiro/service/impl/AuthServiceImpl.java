@@ -31,7 +31,16 @@ public class AuthServiceImpl implements AuthService {
     public LoginResponseDto autenticar(AuthDto data) {
         var usernamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.senha());
         var auth = this.authenticationManager.authenticate(usernamePassword);
-        var token = tokenService.generateToken((Usuario) auth.getPrincipal());
+
+        Usuario usuario;
+        if (auth.getPrincipal() instanceof Usuario u) {
+            usuario = u;
+        } else {
+            usuario = this.usuarioRepository.findByEmail(data.email())
+                    .orElseThrow(() -> new br.com.gerenciadorfinanceiro.exception.EntidadeNaoEncontradaException("Usuário não encontrado."));
+        }
+
+        var token = tokenService.generateToken(usuario);
         return new LoginResponseDto(token);
     }
 

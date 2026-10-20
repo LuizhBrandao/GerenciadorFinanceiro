@@ -1,10 +1,13 @@
 package br.com.gerenciadorfinanceiro.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,6 +18,8 @@ import java.time.Instant;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(EntidadeNaoEncontradaException.class)
     public ResponseEntity<StandardError> entityNotFound(EntidadeNaoEncontradaException e, HttpServletRequest request) {
@@ -78,7 +83,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<StandardError> authentication(AuthenticationException e, HttpServletRequest request) {
         HttpStatus status = HttpStatus.UNAUTHORIZED;
-        StandardError err = new StandardError(Instant.now(), status.value(), "Unauthorized", "Falha de autenticação", request.getRequestURI());
+        String msg = (e instanceof BadCredentialsException)
+                ? "E-mail ou senha inválidos."
+                : "Falha de autenticação: credenciais inválidas ou usuário não localizado.";
+        StandardError err = new StandardError(Instant.now(), status.value(), "Unauthorized", msg, request.getRequestURI());
         return ResponseEntity.status(status).body(err);
     }
 
@@ -98,6 +106,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<StandardError> genericException(Exception e, HttpServletRequest request) {
+        log.error("Erro interno no servidor ao processar requisição [{}]: ", request.getRequestURI(), e);
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         StandardError err = new StandardError(Instant.now(), status.value(), "Internal Server Error", "Ocorreu um erro interno no servidor.", request.getRequestURI());
         return ResponseEntity.status(status).body(err);
