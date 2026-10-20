@@ -6,7 +6,7 @@ Esta Wiki reúne as decisões de Engenharia Upstream (Levantamento de Requisitos
 
 ---
 
-## 📚 Índice da Documentação
+##  Índice da Documentação
 
 1. [**Visão Geral, Diagnóstico de Riscos e Anatomia da Solução**](visao_geral_e_dominio.md)
    * Visão do Produto e Persona
