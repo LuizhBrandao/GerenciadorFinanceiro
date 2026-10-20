@@ -7,8 +7,6 @@ import br.com.gerenciadorfinanceiro.controller.dto.MetricasMesDto;
 import br.com.gerenciadorfinanceiro.controller.dto.ResumoSaldosDto;
 import br.com.gerenciadorfinanceiro.controller.dto.TransacaoResumoDto;
 import br.com.gerenciadorfinanceiro.controller.mapper.DtoMapper;
-import br.com.gerenciadorfinanceiro.model.Categoria;
-import br.com.gerenciadorfinanceiro.model.Transacao;
 import br.com.gerenciadorfinanceiro.model.enums.StatusTransacao;
 import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
 import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
@@ -23,7 +21,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,106 +41,97 @@ public class DashboardServiceImpl implements DashboardService {
     @Transactional(readOnly = true)
     public DashboardDto obterDashboard(Long usuarioId) {
         ResumoSaldosDto saldos = contaService.obterResumoSaldos(usuarioId);
-        List<Transacao> todasTransacoes = transacaoRepository.findByUsuarioId(usuarioId);
 
         LocalDate hoje = LocalDate.now();
         int mesAtual = hoje.getMonthValue();
         int anoAtual = hoje.getYear();
 
-        MetricasMesDto metricasMes = calcularMetricasMes(todasTransacoes, mesAtual, anoAtual);
-        List<TransacaoResumoDto> transacoesRecentes = extrairTransacoesRecentes(todasTransacoes, 5);
-        List<DespesaPorCategoriaDto> despesasPorCategoria = calcularDespesasPorCategoria(todasTransacoes);
-        EvolucaoMensalDto evolucaoMensal = calcularEvolucaoMensal(todasTransacoes, hoje, 6);
+        MetricasMesDto metricasMes = calcularMetricasMes(usuarioId, mesAtual, anoAtual);
+        List<TransacaoResumoDto> transacoesRecentes = transacaoRepository
+                .findTop5ByUsuarioIdAndDataTransacaoLessThanEqualOrderByDataTransacaoDescIdDesc(usuarioId, hoje)
+                .stream()
+                .map(DtoMapper::toTransacaoResumo)
+                .collect(Collectors.toList());
+        List<DespesaPorCategoriaDto> despesasPorCategoria = calcularDespesasPorCategoria(usuarioId);
+        EvolucaoMensalDto evolucaoMensal = calcularEvolucaoMensal(usuarioId, hoje, 6);
 
         return new DashboardDto(saldos, metricasMes, transacoesRecentes, despesasPorCategoria, evolucaoMensal);
     }
 
-    private MetricasMesDto calcularMetricasMes(List<Transacao> transacoes, int mes, int ano) {
-        BigDecimal receitasMes = BigDecimal.ZERO;
-        BigDecimal despesasMes = BigDecimal.ZERO;
-        BigDecimal receitasPendentes = BigDecimal.ZERO;
-        BigDecimal despesasPendentes = BigDecimal.ZERO;
+    private MetricasMesDto calcularMetricasMes(Long usuarioId, int mes, int ano) {
+        BigDecimal receitasMes = transacaoRepository.somarPorTipoEStatusECompetencia(
+                usuarioId, TipoTransacao.RECEITA, StatusTransacao.PAGA, ano, mes);
+        BigDecimal despesasMes = transacaoRepository.somarPorTipoEStatusECompetencia(
+                usuarioId, TipoTransacao.DESPESA, StatusTransacao.PAGA, ano, mes);
+        BigDecimal receitasPendentes = transacaoRepository.somarPorTipoEStatusECompetencia(
+                usuarioId, TipoTransacao.RECEITA, StatusTransacao.PENDENTE, ano, mes);
+        BigDecimal despesasPendentes = transacaoRepository.somarPorTipoEStatusECompetencia(
+                usuarioId, TipoTransacao.DESPESA, StatusTransacao.PENDENTE, ano, mes);
 
-        for (Transacao t : transacoes) {
-            if (t.isTransferenciaPatrimonial()) {
-                continue;
-            }
-            LocalDate data = t.getDataTransacao();
-            if (data != null && data.getMonthValue() == mes && data.getYear() == ano) {
-                BigDecimal valor = t.getValor() != null ? t.getValor() : BigDecimal.ZERO;
+        BigDecimal rMes = (receitasMes != null) ? receitasMes : BigDecimal.ZERO;
+        BigDecimal dMes = (despesasMes != null) ? despesasMes : BigDecimal.ZERO;
+        BigDecimal rPend = (receitasPendentes != null) ? receitasPendentes : BigDecimal.ZERO;
+        BigDecimal dPend = (despesasPendentes != null) ? despesasPendentes : BigDecimal.ZERO;
+        BigDecimal balancoMes = rMes.subtract(dMes);
 
-                if (t.getTipo() == TipoTransacao.RECEITA) {
-                    if (t.getStatus() == StatusTransacao.PAGA) {
-                        receitasMes = receitasMes.add(valor);
-                    } else if (t.getStatus() == StatusTransacao.PENDENTE) {
-                        receitasPendentes = receitasPendentes.add(valor);
-                    }
-                } else if (t.getTipo() == TipoTransacao.DESPESA) {
-                    if (t.getStatus() == StatusTransacao.PAGA) {
-                        despesasMes = despesasMes.add(valor);
-                    } else if (t.getStatus() == StatusTransacao.PENDENTE) {
-                        despesasPendentes = despesasPendentes.add(valor);
-                    }
-                }
+        return new MetricasMesDto(rMes, dMes, balancoMes, rPend, dPend);
+    }
+
+    private List<DespesaPorCategoriaDto> calcularDespesasPorCategoria(Long usuarioId) {
+        List<Object[]> rows = transacaoRepository.agruparDespesasPagasPorCategoria(usuarioId);
+        if (rows == null || rows.isEmpty()) {
+            return List.of();
+        }
+
+        BigDecimal totalGeral = BigDecimal.ZERO;
+        for (Object[] row : rows) {
+            BigDecimal totalCat = (BigDecimal) row[3];
+            if (totalCat != null) {
+                totalGeral = totalGeral.add(totalCat);
             }
         }
 
-        BigDecimal balancoMes = receitasMes.subtract(despesasMes);
-        return new MetricasMesDto(receitasMes, despesasMes, balancoMes, receitasPendentes, despesasPendentes);
+        List<DespesaPorCategoriaDto> resultado = new ArrayList<>(rows.size());
+        for (Object[] row : rows) {
+            Long catId = (Long) row[0];
+            String nome = row[1] != null ? (String) row[1] : "Outras";
+            String icone = row[2] != null ? (String) row[2] : "fa-tag";
+            BigDecimal totalCat = (BigDecimal) row[3];
+            if (totalCat == null) totalCat = BigDecimal.ZERO;
+
+            BigDecimal percentual = (totalGeral.compareTo(BigDecimal.ZERO) > 0)
+                    ? totalCat.multiply(BigDecimal.valueOf(100)).divide(totalGeral, 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            resultado.add(new DespesaPorCategoriaDto(catId, nome, icone, totalCat, percentual));
+        }
+
+        return resultado;
     }
 
-    private List<TransacaoResumoDto> extrairTransacoesRecentes(List<Transacao> transacoes, int limit) {
-        LocalDate hoje = LocalDate.now();
-        return transacoes.stream()
-                .filter(t -> t.getDataTransacao() != null && !t.getDataTransacao().isAfter(hoje))
-                .sorted(Comparator.comparing(Transacao::getDataTransacao, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
-                .limit(limit)
-                .map(DtoMapper::toTransacaoResumo)
-                .collect(Collectors.toList());
-    }
-
-    private List<DespesaPorCategoriaDto> calcularDespesasPorCategoria(List<Transacao> transacoes) {
-        List<Transacao> despesasPagas = transacoes.stream()
-                .filter(t -> !t.isTransferenciaPatrimonial())
-                .filter(t -> t.getTipo() == TipoTransacao.DESPESA && t.getStatus() == StatusTransacao.PAGA)
-                .toList();
-
-        BigDecimal totalGeral = despesasPagas.stream()
-                .map(t -> t.getValor() != null ? t.getValor() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        Map<Categoria, BigDecimal> porCategoria = despesasPagas.stream()
-                .collect(Collectors.groupingBy(
-                        Transacao::getCategoria,
-                        Collectors.reducing(BigDecimal.ZERO,
-                                t -> t.getValor() != null ? t.getValor() : BigDecimal.ZERO,
-                                BigDecimal::add)
-                ));
-
-        return porCategoria.entrySet().stream()
-                .map(entry -> {
-                    Categoria cat = entry.getKey();
-                    BigDecimal totalCat = entry.getValue();
-                    BigDecimal percentual = (totalGeral.compareTo(BigDecimal.ZERO) > 0)
-                            ? totalCat.multiply(BigDecimal.valueOf(100)).divide(totalGeral, 1, RoundingMode.HALF_UP)
-                            : BigDecimal.ZERO;
-
-                    Long catId = cat != null ? cat.getId() : null;
-                    String nome = cat != null ? cat.getNome() : "Outras";
-                    String icone = cat != null ? cat.getIcone() : "fa-tag";
-
-                    return new DespesaPorCategoriaDto(catId, nome, icone, totalCat, percentual);
-                })
-                .sorted(Comparator.comparing(DespesaPorCategoriaDto::total).reversed())
-                .collect(Collectors.toList());
-    }
-
-    private EvolucaoMensalDto calcularEvolucaoMensal(List<Transacao> transacoes, LocalDate referencia, int quantidadeMeses) {
-        List<String> labels = new ArrayList<>();
-        List<BigDecimal> receitas = new ArrayList<>();
-        List<BigDecimal> despesas = new ArrayList<>();
+    private EvolucaoMensalDto calcularEvolucaoMensal(Long usuarioId, LocalDate referencia, int quantidadeMeses) {
+        List<String> labels = new ArrayList<>(quantidadeMeses);
+        List<BigDecimal> receitas = new ArrayList<>(quantidadeMeses);
+        List<BigDecimal> despesas = new ArrayList<>(quantidadeMeses);
 
         YearMonth ymAtual = YearMonth.from(referencia);
+        YearMonth ymInicial = ymAtual.minusMonths(quantidadeMeses - 1);
+
+        LocalDate dataInicio = ymInicial.atDay(1);
+        LocalDate dataFim = ymAtual.atEndOfMonth();
+
+        List<Object[]> rows = transacaoRepository.somarEvolucaoMensalPorPeriodo(usuarioId, dataInicio, dataFim);
+        Map<String, BigDecimal> totais = new HashMap<>();
+        if (rows != null) {
+            for (Object[] row : rows) {
+                Integer ano = ((Number) row[0]).intValue();
+                Integer mes = ((Number) row[1]).intValue();
+                TipoTransacao tipo = (TipoTransacao) row[2];
+                BigDecimal valor = (BigDecimal) row[3];
+                String chave = ano + "-" + mes + "-" + tipo.name();
+                totais.put(chave, valor != null ? valor : BigDecimal.ZERO);
+            }
+        }
 
         for (int i = quantidadeMeses - 1; i >= 0; i--) {
             YearMonth ym = ymAtual.minusMonths(i);
@@ -152,24 +141,8 @@ public class DashboardServiceImpl implements DashboardService {
             String label = MESES_PT[mes - 1] + "/" + String.valueOf(ano).substring(2);
             labels.add(label);
 
-            BigDecimal totalReceitas = BigDecimal.ZERO;
-            BigDecimal totalDespesas = BigDecimal.ZERO;
-
-            for (Transacao t : transacoes) {
-                if (t.isTransferenciaPatrimonial()) {
-                    continue;
-                }
-                if (t.getStatus() == StatusTransacao.PAGA && t.getDataTransacao() != null) {
-                    if (t.getDataTransacao().getMonthValue() == mes && t.getDataTransacao().getYear() == ano) {
-                        BigDecimal val = t.getValor() != null ? t.getValor() : BigDecimal.ZERO;
-                        if (t.getTipo() == TipoTransacao.RECEITA) {
-                            totalReceitas = totalReceitas.add(val);
-                        } else if (t.getTipo() == TipoTransacao.DESPESA) {
-                            totalDespesas = totalDespesas.add(val);
-                        }
-                    }
-                }
-            }
+            BigDecimal totalReceitas = totais.getOrDefault(ano + "-" + mes + "-" + TipoTransacao.RECEITA.name(), BigDecimal.ZERO);
+            BigDecimal totalDespesas = totais.getOrDefault(ano + "-" + mes + "-" + TipoTransacao.DESPESA.name(), BigDecimal.ZERO);
 
             receitas.add(totalReceitas);
             despesas.add(totalDespesas);

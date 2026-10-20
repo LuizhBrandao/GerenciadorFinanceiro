@@ -8,8 +8,8 @@ VALUES (1, 'Usuário de Teste', 'teste@financeiro.com', '$2a$10$wN1yD0eY7UqLlhfF
 ON CONFLICT (email) DO NOTHING;
 
 -- 2. Preferências do Usuário
-INSERT INTO preferencias_usuario (id, usuario_id, moeda_padrao, notificacoes_email, tema_escuro, limite_alerta_orcamento)
-VALUES (1, 1, 'BRL', true, false, 80.00)
+INSERT INTO preferencias_usuario (id, usuario_id, moeda_padrao, receber_notificacoes, tema)
+VALUES (1, 1, 'BRL', true, 'LIGHT')
 ON CONFLICT (id) DO NOTHING;
 
 -- 3. As 10 Categorias Essenciais
@@ -37,20 +37,20 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. Contas Bancárias de Exemplo
-INSERT INTO contas (id, usuario_id, nome, instituicao_financeira, tipo_conta, saldo, ativo, data_criacao)
+INSERT INTO contas (id, usuario_id, nome, instituicao_financeira, tipo_conta, saldo, ativo, data_criacao, version)
 VALUES 
-(1, 1, 'Nubank - Conta Corrente', 'Nubank', 'CORRENTE', 4250.00, true, CURRENT_TIMESTAMP),
-(2, 1, 'Itaú - Reserva Poupança', 'Itaú', 'POUPANCA', 12000.00, true, CURRENT_TIMESTAMP)
+(1, 1, 'Nubank - Conta Corrente', 'Nubank', 'CORRENTE', 4250.00, true, CURRENT_TIMESTAMP, 0),
+(2, 1, 'Itaú - Reserva Poupança', 'Itaú', 'POUPANCA', 12000.00, true, CURRENT_TIMESTAMP, 0)
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. Transações de Exemplo para Testes Imediatos
-INSERT INTO transacoes (id, usuario_id, conta_id, categoria_id, descricao, valor, tipo, status, data_transacao, observacao, data_registro)
+INSERT INTO transacoes (id, usuario_id, conta_id, categoria_id, descricao, valor, tipo, status, data_transacao, observacao, data_registro, transferencia)
 VALUES 
-(1, 1, 1, 1, 'Salário Mensal', 6500.00, 'RECEITA', 'PAGA', CURRENT_DATE - INTERVAL '15 days', 'Crédito de salário em conta', CURRENT_TIMESTAMP),
-(2, 1, 2, 2, 'Rendimentos FIIs / Dividendos', 320.50, 'RECEITA', 'PAGA', CURRENT_DATE - INTERVAL '10 days', 'Proventos recebidos', CURRENT_TIMESTAMP),
-(3, 1, 1, 4, 'Aluguel & Condomínio', 1800.00, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '12 days', 'Despesa fixa moradia', CURRENT_TIMESTAMP),
-(4, 1, 1, 5, 'Supermercado Mensal', 850.30, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '8 days', 'Compras do mês', CURRENT_TIMESTAMP),
-(5, 1, 1, 6, 'Combustível Posto Shell', 220.00, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '5 days', 'Abastecimento', CURRENT_TIMESTAMP),
-(6, 1, 1, 7, 'Farmácia Drogasil', 135.80, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '3 days', 'Medicamentos', CURRENT_TIMESTAMP),
-(7, 1, 1, 9, 'Jantar Restaurante', 190.00, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '1 day', 'Lazer fim de semana', CURRENT_TIMESTAMP)
+(1, 1, 1, 1, 'Salário Mensal', 6500.00, 'RECEITA', 'PAGA', CURRENT_DATE - INTERVAL '15 days', 'Crédito de salário em conta', CURRENT_TIMESTAMP, false),
+(2, 1, 2, 2, 'Rendimentos FIIs / Dividendos', 320.50, 'RECEITA', 'PAGA', CURRENT_DATE - INTERVAL '10 days', 'Proventos recebidos', CURRENT_TIMESTAMP, false),
+(3, 1, 1, 4, 'Aluguel & Condomínio', 1800.00, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '12 days', 'Despesa fixa moradia', CURRENT_TIMESTAMP, false),
+(4, 1, 1, 5, 'Supermercado Mensal', 850.30, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '8 days', 'Compras do mês', CURRENT_TIMESTAMP, false),
+(5, 1, 1, 6, 'Combustível Posto Shell', 220.00, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '5 days', 'Abastecimento', CURRENT_TIMESTAMP, false),
+(6, 1, 1, 7, 'Farmácia Drogasil', 135.80, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '3 days', 'Medicamentos', CURRENT_TIMESTAMP, false),
+(7, 1, 1, 9, 'Jantar Restaurante', 190.00, 'DESPESA', 'PAGA', CURRENT_DATE - INTERVAL '1 day', 'Lazer fim de semana', CURRENT_TIMESTAMP, false)
 ON CONFLICT (id) DO NOTHING;

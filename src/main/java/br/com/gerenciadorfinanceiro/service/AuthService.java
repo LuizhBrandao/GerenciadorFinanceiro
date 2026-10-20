@@ -1,21 +1,12 @@
 package br.com.gerenciadorfinanceiro.service;
 
-import br.com.gerenciadorfinanceiro.repository.UsuarioRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
+import br.com.gerenciadorfinanceiro.controller.dto.AuthDto;
+import br.com.gerenciadorfinanceiro.controller.dto.LoginResponseDto;
+import br.com.gerenciadorfinanceiro.controller.dto.RegisterDto;
 
-@Service
-@RequiredArgsConstructor
-public class AuthService implements UserDetailsService {
+public interface AuthService {
 
-    private final UsuarioRepository repository;
+    LoginResponseDto autenticar(AuthDto data);
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return repository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + username));
-    }
+    void registrar(RegisterDto data);
 }

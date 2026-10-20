@@ -16,7 +16,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-    open-in-view: true
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true

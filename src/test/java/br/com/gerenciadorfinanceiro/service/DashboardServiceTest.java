@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -59,7 +60,7 @@ class DashboardServiceTest {
     }
 
     @Test
-    @DisplayName("Deve consolidar metricas do mes atual, despesas por categoria e evolucao mensal no DashboardDto")
+    @DisplayName("Deve consolidar métricas do mês atual, despesas por categoria e evolução mensal via consultas agregadas CQRS")
     void deveConsolidarDashboardCorretamente() {
         LocalDate hoje = LocalDate.now();
 
@@ -77,7 +78,24 @@ class DashboardServiceTest {
         );
 
         when(contaService.obterResumoSaldos(1L)).thenReturn(resumoSaldos);
-        when(transacaoRepository.findByUsuarioId(1L)).thenReturn(List.of(t1, t2, t3));
+        when(transacaoRepository.somarPorTipoEStatusECompetencia(eq(1L), eq(TipoTransacao.RECEITA), eq(StatusTransacao.PAGA), anyInt(), anyInt()))
+                .thenReturn(BigDecimal.valueOf(5000));
+        when(transacaoRepository.somarPorTipoEStatusECompetencia(eq(1L), eq(TipoTransacao.DESPESA), eq(StatusTransacao.PAGA), anyInt(), anyInt()))
+                .thenReturn(BigDecimal.valueOf(800));
+        when(transacaoRepository.somarPorTipoEStatusECompetencia(eq(1L), eq(TipoTransacao.RECEITA), eq(StatusTransacao.PENDENTE), anyInt(), anyInt()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transacaoRepository.somarPorTipoEStatusECompetencia(eq(1L), eq(TipoTransacao.DESPESA), eq(StatusTransacao.PENDENTE), anyInt(), anyInt()))
+                .thenReturn(BigDecimal.valueOf(150));
+
+        when(transacaoRepository.findTop5ByUsuarioIdAndDataTransacaoLessThanEqualOrderByDataTransacaoDescIdDesc(eq(1L), any(LocalDate.class)))
+                .thenReturn(List.of(t1, t2, t3));
+
+        List<Object[]> rowsCategorias = java.util.Collections.singletonList(
+                new Object[]{100L, "Alimentação", "fa-utensils", BigDecimal.valueOf(800)}
+        );
+        when(transacaoRepository.agruparDespesasPagasPorCategoria(1L)).thenReturn(rowsCategorias);
+        when(transacaoRepository.somarEvolucaoMensalPorPeriodo(eq(1L), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
 
         DashboardDto dashboard = dashboardService.obterDashboard(1L);
 
@@ -105,27 +123,37 @@ class DashboardServiceTest {
     }
 
     @Test
-    @DisplayName("Não deve contabilizar transferências entre contas como receita ou despesa operacional do mês")
+    @DisplayName("Deve computar métricas operacionais ignorando transferências patrimoniais")
     void deveIgnorarTransferenciasNoCalculoDeReceitasEDespesasDoMes() {
-        Conta contaReserva = new Conta(usuario, "Reserva", "Banco", TipoConta.POUPANCA, BigDecimal.valueOf(1000));
-        contaReserva.setId(20L);
-
-        Transacao despesaReal = new Transacao(usuario, "Mercado", new BigDecimal("200.00"), TipoTransacao.DESPESA, StatusTransacao.PAGA, LocalDate.now(), conta, catAlimentacao, "");
-        Transacao saidaTransf = Transacao.criarSaidaTransferencia(conta, contaReserva, new BigDecimal("500.00"), catAlimentacao);
-        Transacao entradaTransf = Transacao.criarEntradaTransferencia(conta, contaReserva, new BigDecimal("500.00"), catSalario);
-
         ResumoSaldosDto resumoSaldos = new ResumoSaldosDto(
                 BigDecimal.valueOf(1300), BigDecimal.valueOf(1500), BigDecimal.valueOf(2800), 1, 1
         );
 
         when(contaService.obterResumoSaldos(1L)).thenReturn(resumoSaldos);
-        when(transacaoRepository.findByUsuarioId(1L)).thenReturn(List.of(despesaReal, saidaTransf, entradaTransf));
+        when(transacaoRepository.somarPorTipoEStatusECompetencia(eq(1L), eq(TipoTransacao.RECEITA), eq(StatusTransacao.PAGA), anyInt(), anyInt()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transacaoRepository.somarPorTipoEStatusECompetencia(eq(1L), eq(TipoTransacao.DESPESA), eq(StatusTransacao.PAGA), anyInt(), anyInt()))
+                .thenReturn(new BigDecimal("200.00"));
+        when(transacaoRepository.somarPorTipoEStatusECompetencia(eq(1L), eq(TipoTransacao.RECEITA), eq(StatusTransacao.PENDENTE), anyInt(), anyInt()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transacaoRepository.somarPorTipoEStatusECompetencia(eq(1L), eq(TipoTransacao.DESPESA), eq(StatusTransacao.PENDENTE), anyInt(), anyInt()))
+                .thenReturn(BigDecimal.ZERO);
+
+        when(transacaoRepository.findTop5ByUsuarioIdAndDataTransacaoLessThanEqualOrderByDataTransacaoDescIdDesc(eq(1L), any(LocalDate.class)))
+                .thenReturn(List.of());
+
+        List<Object[]> rowsCategorias = java.util.Collections.singletonList(
+                new Object[]{100L, "Alimentação", "fa-utensils", new BigDecimal("200.00")}
+        );
+        when(transacaoRepository.agruparDespesasPagasPorCategoria(1L)).thenReturn(rowsCategorias);
+        when(transacaoRepository.somarEvolucaoMensalPorPeriodo(eq(1L), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
 
         DashboardDto dashboard = dashboardService.obterDashboard(1L);
 
         assertEquals(0, BigDecimal.ZERO.compareTo(dashboard.metricasMes().receitasMes()));
         assertEquals(0, new BigDecimal("200.00").compareTo(dashboard.metricasMes().despesasMes()));
         assertEquals(1, dashboard.despesasPorCategoria().size());
-        assertEquals(3, dashboard.transacoesRecentes().size());
+        assertEquals(0, dashboard.transacoesRecentes().size());
     }
 }

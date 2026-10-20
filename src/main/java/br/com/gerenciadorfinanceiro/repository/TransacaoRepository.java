@@ -32,4 +32,44 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long>, Jpa
             @Param("categoriaId") Long categoriaId,
             @Param("ano") Integer ano,
             @Param("mes") Integer mes);
+
+    @Query("SELECT COALESCE(SUM(t.valor), 0) FROM Transacao t " +
+           "WHERE t.usuario.id = :usuarioId " +
+           "AND t.tipo = :tipo " +
+           "AND t.status = :status " +
+           "AND YEAR(t.dataTransacao) = :ano " +
+           "AND MONTH(t.dataTransacao) = :mes " +
+           "AND (t.transferencia IS NULL OR t.transferencia = false)")
+    BigDecimal somarPorTipoEStatusECompetencia(
+            @Param("usuarioId") Long usuarioId,
+            @Param("tipo") br.com.gerenciadorfinanceiro.model.enums.TipoTransacao tipo,
+            @Param("status") br.com.gerenciadorfinanceiro.model.enums.StatusTransacao status,
+            @Param("ano") Integer ano,
+            @Param("mes") Integer mes);
+
+    @Query("SELECT t.categoria.id, t.categoria.nome, t.categoria.icone, SUM(t.valor) " +
+           "FROM Transacao t " +
+           "WHERE t.usuario.id = :usuarioId " +
+           "AND t.tipo = 'DESPESA' " +
+           "AND t.status = 'PAGA' " +
+           "AND (t.transferencia IS NULL OR t.transferencia = false) " +
+           "GROUP BY t.categoria.id, t.categoria.nome, t.categoria.icone " +
+           "ORDER BY SUM(t.valor) DESC")
+    List<Object[]> agruparDespesasPagasPorCategoria(@Param("usuarioId") Long usuarioId);
+
+    @Query("SELECT YEAR(t.dataTransacao), MONTH(t.dataTransacao), t.tipo, SUM(t.valor) " +
+           "FROM Transacao t " +
+           "WHERE t.usuario.id = :usuarioId " +
+           "AND t.status = 'PAGA' " +
+           "AND (t.transferencia IS NULL OR t.transferencia = false) " +
+           "AND t.dataTransacao >= :dataInicio " +
+           "AND t.dataTransacao <= :dataFim " +
+           "GROUP BY YEAR(t.dataTransacao), MONTH(t.dataTransacao), t.tipo")
+    List<Object[]> somarEvolucaoMensalPorPeriodo(
+            @Param("usuarioId") Long usuarioId,
+            @Param("dataInicio") java.time.LocalDate dataInicio,
+            @Param("dataFim") java.time.LocalDate dataFim);
+
+    List<Transacao> findTop5ByUsuarioIdAndDataTransacaoLessThanEqualOrderByDataTransacaoDescIdDesc(
+            Long usuarioId, java.time.LocalDate dataLimite);
 }
