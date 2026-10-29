@@ -74,16 +74,20 @@ public class TransferenciaServiceImpl implements TransferenciaService {
         if (usuario == null || usuario.getId() == null) {
             return null;
         }
-        List<Categoria> categorias = categoriaRepository.findByUsuarioId(usuario.getId());
-        return categorias.stream()
-                .filter(c -> c.getTipo() == tipo && CATEGORIA_TRANSFERENCIA.equalsIgnoreCase(c.getNome()))
-                .findFirst()
-                .orElseGet(() -> categoriaRepository.save(new Categoria(
-                        usuario,
-                        CATEGORIA_TRANSFERENCIA,
-                        tipo,
-                        "Movimentação patrimonial interna entre contas do mesmo titular.",
-                        "fa-right-left"
-                )));
+        return categoriaRepository.findByUsuarioIdAndNomeIgnoreCaseAndTipo(usuario.getId(), CATEGORIA_TRANSFERENCIA, tipo)
+                .orElseGet(() -> {
+                    try {
+                        return categoriaRepository.save(new Categoria(
+                                usuario,
+                                CATEGORIA_TRANSFERENCIA,
+                                tipo,
+                                "Movimentação patrimonial interna entre contas do mesmo titular.",
+                                "fa-right-left"
+                        ));
+                    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                        return categoriaRepository.findByUsuarioIdAndNomeIgnoreCaseAndTipo(usuario.getId(), CATEGORIA_TRANSFERENCIA, tipo)
+                                .orElse(null);
+                    }
+                });
     }
 }

@@ -19,6 +19,8 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long>, Jpa
     List<Transacao> findByContaIdAndUsuarioId(Long contaId, Long usuarioId);
     List<Transacao> findByRecorrenciaId(Long recorrenciaId);
     List<Transacao> findByUsuarioIdAndRecorrenciaIsNullAndDescricaoIgnoreCase(Long usuarioId, String descricao);
+    Optional<Transacao> findByChaveRecorrencia(String chaveRecorrencia);
+    boolean existsByChaveRecorrencia(String chaveRecorrencia);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Transacao t SET t.status = br.com.gerenciadorfinanceiro.model.enums.StatusTransacao.PAGA " +

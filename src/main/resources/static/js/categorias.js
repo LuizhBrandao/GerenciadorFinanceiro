@@ -33,7 +33,8 @@ const categoriasModule = {
         }
     },
 
-    async inicializarCategoriasPadrao() {
+    async inicializarCategoriasPadrao(btn) {
+        if (btn) setButtonSubmitting(btn, true, 'Criando...');
         try {
             const data = await api.post('/categorias/inicializar-padrao');
             this.categorias = data || [];
@@ -41,7 +42,9 @@ const categoriasModule = {
             this.updateCategoriasSelects();
             showToast('Categorias essenciais criadas com sucesso!', 'success');
         } catch (error) {
-            showToast('Erro ao criar categorias padrão.', 'error');
+            showToast(error.message || 'Erro ao criar categorias padrão.', 'error');
+        } finally {
+            if (btn) setButtonSubmitting(btn, false);
         }
     },
 
@@ -58,7 +61,7 @@ const categoriasModule = {
                     <h4 class="text-base font-semibold text-slate-700 mb-1">Nenhuma categoria cadastrada</h4>
                     <p class="text-sm text-slate-400 mb-4">Crie categorias personalizadas ou gere as categorias essenciais recomendadas.</p>
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="categoriasModule.inicializarCategoriasPadrao()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                        <button onclick="categoriasModule.inicializarCategoriasPadrao(this)" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
                             <i class="fas fa-magic mr-1.5"></i> Criar Categorias Essenciais
                         </button>
                         <button onclick="categoriasModule.openNewCategoriaModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-colors">
@@ -211,6 +214,7 @@ const categoriasModule = {
 
     async handleSaveCategoria(e) {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
         const nome = document.getElementById('categoria-nome').value.trim();
         const tipo = document.getElementById('categoria-tipo').value;
         const descricao = document.getElementById('categoria-descricao').value.trim();
@@ -221,6 +225,7 @@ const categoriasModule = {
             return;
         }
 
+        setButtonSubmitting(submitBtn, true, 'Salvando...');
         try {
             await api.post('/categorias', {
                 nome,
@@ -234,6 +239,8 @@ const categoriasModule = {
             await this.loadCategorias();
         } catch (error) {
             showToast(error.message || 'Erro ao criar categoria.', 'error');
+        } finally {
+            setButtonSubmitting(submitBtn, false);
         }
     },
 

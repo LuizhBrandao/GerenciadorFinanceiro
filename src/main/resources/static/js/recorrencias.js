@@ -137,7 +137,7 @@ const recorrenciasModule = {
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <button onclick="recorrenciasModule.lancarAgora(${rec.id})" title="Lançar Transação Agora" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors text-xs font-bold flex items-center gap-1">
+                            <button onclick="recorrenciasModule.lancarAgora(${rec.id}, this)" title="Lançar Transação Agora" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors text-xs font-bold flex items-center gap-1">
                                 <i class="fas fa-bolt text-xs"></i> Lançar
                             </button>
                             <button onclick="recorrenciasModule.toggleStatus(${rec.id})" title="${rec.ativo ? 'Pausar Recorrência' : 'Ativar Recorrência'}" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
@@ -221,6 +221,7 @@ const recorrenciasModule = {
 
     async handleSaveRecorrencia(e) {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
         const id = document.getElementById('recorrencia-id').value;
         const descricao = document.getElementById('recorrencia-descricao').value.trim();
         const valor = parseFloat(document.getElementById('recorrencia-valor').value);
@@ -238,6 +239,7 @@ const recorrenciasModule = {
             return;
         }
 
+        setButtonSubmitting(submitBtn, true, 'Salvando...');
         const payload = {
             descricao,
             valor,
@@ -270,6 +272,8 @@ const recorrenciasModule = {
             }
         } catch (error) {
             showToast(error.message || 'Erro ao salvar recorrência.', 'error');
+        } finally {
+            setButtonSubmitting(submitBtn, false);
         }
     },
 
@@ -303,7 +307,8 @@ const recorrenciasModule = {
         }
     },
 
-    async processarPendentes() {
+    async processarPendentes(btn) {
+        if (btn) setButtonSubmitting(btn, true, 'Processando...');
         try {
             const geradas = await api.post('/recorrencias/processar');
             const count = (geradas && Array.isArray(geradas)) ? geradas.length : 0;
@@ -324,6 +329,8 @@ const recorrenciasModule = {
             }
         } catch (error) {
             showToast(error.message || 'Erro ao processar pendências.', 'error');
+        } finally {
+            if (btn) setButtonSubmitting(btn, false);
         }
     },
 

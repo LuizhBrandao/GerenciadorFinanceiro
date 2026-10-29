@@ -59,6 +59,9 @@ public class Transacao {
     @JoinColumn(name = "recorrencia_id")
     private TransacaoRecorrente recorrencia;
 
+    @Column(name = "chave_recorrencia", length = 100, unique = true)
+    private String chaveRecorrencia;
+
     @Column(name = "transferencia", columnDefinition = "boolean default false")
     private Boolean transferencia = false;
 
@@ -182,6 +185,10 @@ public class Transacao {
 
     public void definirTags(java.util.Set<Tag> tags) {
         this.tags = (tags != null) ? new java.util.HashSet<>(tags) : new java.util.HashSet<>();
+    }
+
+    public void definirChaveRecorrencia(String chaveRecorrencia) {
+        this.chaveRecorrencia = chaveRecorrencia;
     }
 }
 

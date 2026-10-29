@@ -10,6 +10,9 @@ import br.com.gerenciadorfinanceiro.model.enums.TipoConta;
 import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
 import br.com.gerenciadorfinanceiro.repository.CategoriaRepository;
 import br.com.gerenciadorfinanceiro.repository.ContaRepository;
+import br.com.gerenciadorfinanceiro.repository.OrcamentoRepository;
+import br.com.gerenciadorfinanceiro.repository.TagRepository;
+import br.com.gerenciadorfinanceiro.repository.TransacaoRecorrenteRepository;
 import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.repository.UsuarioRepository;
 import br.com.gerenciadorfinanceiro.service.ContaService;
@@ -56,12 +59,24 @@ public class ConcorrenciaSaldoIntegrationTest {
     @Autowired
     private CategoriaRepository categoriaRepository;
 
+    @Autowired
+    private TransacaoRecorrenteRepository transacaoRecorrenteRepository;
+
+    @Autowired
+    private OrcamentoRepository orcamentoRepository;
+
+    @Autowired
+    private TagRepository tagRepository;
+
     private Usuario usuario;
     private Categoria categoria;
 
     @BeforeEach
     void setUp() {
         transacaoRepository.deleteAll();
+        transacaoRecorrenteRepository.deleteAll();
+        orcamentoRepository.deleteAll();
+        tagRepository.deleteAll();
         contaRepository.deleteAll();
         categoriaRepository.deleteAll();
         usuarioRepository.deleteAll();

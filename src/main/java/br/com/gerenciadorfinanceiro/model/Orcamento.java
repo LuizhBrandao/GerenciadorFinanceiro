@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "orcamentos", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"categoria_id", "ano", "mes"})
+        @UniqueConstraint(name = "uk_orcamentos_categoria_ano_mes", columnNames = {"categoria_id", "ano", "mes"})
 })
 @Getter
 @NoArgsConstructor

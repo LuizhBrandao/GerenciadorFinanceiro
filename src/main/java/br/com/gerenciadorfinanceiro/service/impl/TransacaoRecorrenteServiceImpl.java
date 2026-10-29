@@ -6,6 +6,7 @@ import br.com.gerenciadorfinanceiro.controller.dto.ResumoRecorrenciasDto;
 import br.com.gerenciadorfinanceiro.controller.dto.TransacaoResponseDto;
 import br.com.gerenciadorfinanceiro.controller.mapper.DtoMapper;
 import br.com.gerenciadorfinanceiro.exception.EntidadeNaoEncontradaException;
+import br.com.gerenciadorfinanceiro.exception.RegraNegocioException;
 import br.com.gerenciadorfinanceiro.model.Categoria;
 import br.com.gerenciadorfinanceiro.model.Conta;
 import br.com.gerenciadorfinanceiro.model.Transacao;
@@ -382,6 +383,11 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
     }
 
     private Transacao criarEGravarTransacao(TransacaoRecorrente rec, LocalDate dataTransacao, StatusTransacao status) {
+        String chave = "REC_" + rec.getId() + "_" + dataTransacao;
+        if (transacaoRepository.existsByChaveRecorrencia(chave)) {
+            return transacaoRepository.findByChaveRecorrencia(chave).orElse(null);
+        }
+
         String sufixoObservacao = rec.getObservacao() != null && !rec.getObservacao().isBlank()
                 ? " - " + rec.getObservacao()
                 : "";
@@ -398,7 +404,13 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
                 "[Lançamento Recorrente]" + sufixoObservacao
         );
         transacao.vincularRecorrencia(rec);
+        transacao.definirChaveRecorrencia(chave);
 
-        return transacaoService.salvarEntidade(transacao);
+        try {
+            return transacaoService.salvarEntidade(transacao);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            log.info("Transação recorrente já gerada concorrentemente para a chave: {}", chave);
+            throw new RegraNegocioException("Esta ocorrência da transação recorrente já foi lançada.");
+        }
     }
 }

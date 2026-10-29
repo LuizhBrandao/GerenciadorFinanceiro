@@ -138,3 +138,22 @@ function closeModal(modalId) {
         }, 200);
     }
 }
+
+
+// Desabilita/habilita botão durante requisições assíncronas para prevenir duplo clique
+function setButtonSubmitting(button, isSubmitting, loadingText = 'Salvando...') {
+    if (!button) return;
+    if (isSubmitting) {
+        button.disabled = true;
+        button.dataset.originalHtml = button.innerHTML;
+        button.innerHTML = <span class="inline-flex items-center gap-2"><i class="fas fa-spinner fa-spin text-xs"></i>  + loadingText + </span>;
+        button.classList.add('opacity-75', 'cursor-not-allowed');
+    } else {
+        button.disabled = false;
+        if (button.dataset.originalHtml) {
+            button.innerHTML = button.dataset.originalHtml;
+            delete button.dataset.originalHtml;
+        }
+        button.classList.remove('opacity-75', 'cursor-not-allowed');
+    }
+}

@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -62,7 +63,8 @@ class TransferenciaServiceTest {
     void deveTransferirComSucesso() {
         when(contaService.buscarEntidadePorId(10L, 1L)).thenReturn(contaOrigem);
         when(contaService.buscarEntidadePorId(20L, 1L)).thenReturn(contaDestino);
-        when(categoriaRepository.findByUsuarioId(1L)).thenReturn(Collections.emptyList());
+        when(categoriaRepository.findByUsuarioIdAndNomeIgnoreCaseAndTipo(eq(1L), anyString(), any(TipoTransacao.class)))
+                .thenReturn(Optional.empty());
         when(categoriaRepository.save(any(Categoria.class))).thenAnswer(inv -> inv.getArgument(0));
 
         transferenciaService.transferir(1L, 10L, 20L, new BigDecimal("300.00"));

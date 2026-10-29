@@ -12,7 +12,7 @@ import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.model.enums.StatusTransacao;
 import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
 import br.com.gerenciadorfinanceiro.model.vo.ValorMonetario;
-import br.com.gerenciadorfinanceiro.repository.TagRepository;
+import br.com.gerenciadorfinanceiro.service.TagService;
 import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.repository.spec.TransacaoSpecs;
 import br.com.gerenciadorfinanceiro.service.CategoriaService;
@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 public class TransacaoServiceImpl implements TransacaoService {
 
     private final TransacaoRepository transacaoRepository;
-    private final TagRepository tagRepository;
+    private final TagService tagService;
     private final ContaService contaService;
     private final CategoriaService categoriaService;
 
@@ -232,10 +232,10 @@ public class TransacaoServiceImpl implements TransacaoService {
         Set<Tag> tags = new HashSet<>();
         for (String nome : nomesTags) {
             if (nome != null && !nome.isBlank()) {
-                String nomeLimpo = nome.trim();
-                Tag tag = tagRepository.findByUsuarioIdAndNomeIgnoreCase(usuario.getId(), nomeLimpo)
-                        .orElseGet(() -> tagRepository.save(new Tag(usuario, nomeLimpo)));
-                tags.add(tag);
+                Tag tag = tagService.obterOuCriar(usuario, nome);
+                if (tag != null) {
+                    tags.add(tag);
+                }
             }
         }
         return tags;

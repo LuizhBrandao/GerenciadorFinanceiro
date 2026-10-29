@@ -268,6 +268,7 @@ const contasModule = {
 
     async handleSaveConta(e) {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
         const id = document.getElementById('conta-id').value;
         const nome = document.getElementById('conta-nome').value.trim();
         const instituicaoFinanceira = document.getElementById('conta-instituicao').value.trim();
@@ -279,6 +280,7 @@ const contasModule = {
             return;
         }
 
+        setButtonSubmitting(submitBtn, true, 'Salvando...');
         try {
             if (id) {
                 await api.put(`/contas/${id}`, {
@@ -304,6 +306,8 @@ const contasModule = {
             }
         } catch (error) {
             showToast(error.message || 'Erro ao salvar conta.', 'error');
+        } finally {
+            setButtonSubmitting(submitBtn, false);
         }
     },
 
@@ -335,6 +339,7 @@ const contasModule = {
 
     async handleTransferencia(e) {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
         const origem = document.getElementById('transferencia-origem').value;
         const destino = document.getElementById('transferencia-destino').value;
         const valor = parseFloat(document.getElementById('transferencia-valor').value);
@@ -349,6 +354,7 @@ const contasModule = {
             return;
         }
 
+        setButtonSubmitting(submitBtn, true, 'Transferindo...');
         try {
             await api.post('/contas/transferir', {
                 contaOrigemId: parseInt(origem),
@@ -363,6 +369,8 @@ const contasModule = {
             }
         } catch (error) {
             showToast(error.message || 'Erro ao realizar transferência.', 'error');
+        } finally {
+            setButtonSubmitting(submitBtn, false);
         }
     },
 

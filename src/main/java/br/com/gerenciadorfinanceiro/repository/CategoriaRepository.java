@@ -1,6 +1,7 @@
 package br.com.gerenciadorfinanceiro.repository;
 
 import br.com.gerenciadorfinanceiro.model.Categoria;
+import br.com.gerenciadorfinanceiro.model.enums.TipoTransacao;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,4 +12,6 @@ import java.util.Optional;
 public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     List<Categoria> findByUsuarioId(Long usuarioId);
     Optional<Categoria> findByIdAndUsuarioId(Long id, Long usuarioId);
+    boolean existsByUsuarioIdAndNomeIgnoreCaseAndTipo(Long usuarioId, String nome, TipoTransacao tipo);
+    Optional<Categoria> findByUsuarioIdAndNomeIgnoreCaseAndTipo(Long usuarioId, String nome, TipoTransacao tipo);
 }

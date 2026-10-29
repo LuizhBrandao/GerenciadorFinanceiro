@@ -4,11 +4,13 @@ import br.com.gerenciadorfinanceiro.controller.dto.CategoriaRequestDto;
 import br.com.gerenciadorfinanceiro.controller.dto.CategoriaResponseDto;
 import br.com.gerenciadorfinanceiro.controller.mapper.DtoMapper;
 import br.com.gerenciadorfinanceiro.exception.EntidadeNaoEncontradaException;
+import br.com.gerenciadorfinanceiro.exception.RegraNegocioException;
 import br.com.gerenciadorfinanceiro.model.Categoria;
 import br.com.gerenciadorfinanceiro.model.Usuario;
 import br.com.gerenciadorfinanceiro.repository.CategoriaRepository;
 import br.com.gerenciadorfinanceiro.service.CategoriaService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,16 +48,25 @@ public class CategoriaServiceImpl implements CategoriaService {
     @Override
     @Transactional
     public CategoriaResponseDto criar(CategoriaRequestDto request, Usuario usuario) {
+        String nomeLimpo = request.nome() != null ? request.nome().trim() : "";
+        if (categoriaRepository.existsByUsuarioIdAndNomeIgnoreCaseAndTipo(usuario.getId(), nomeLimpo, request.tipo())) {
+            throw new RegraNegocioException("Já existe uma categoria cadastrada com o nome '" + nomeLimpo + "' para o tipo " + request.tipo() + ".");
+        }
+
         String icone = (request.icone() != null && !request.icone().isBlank()) ? request.icone() : "fa-tag";
         Categoria categoria = new Categoria(
                 usuario,
-                request.nome(),
+                nomeLimpo,
                 request.tipo(),
                 request.descricao(),
                 icone
         );
-        Categoria salva = categoriaRepository.save(categoria);
-        return DtoMapper.toCategoriaResponse(salva);
+        try {
+            Categoria salva = categoriaRepository.save(categoria);
+            return DtoMapper.toCategoriaResponse(salva);
+        } catch (DataIntegrityViolationException e) {
+            throw new RegraNegocioException("Já existe uma categoria cadastrada com o nome '" + nomeLimpo + "' para o tipo " + request.tipo() + ".");
+        }
     }
 
     @Override
@@ -64,10 +75,17 @@ public class CategoriaServiceImpl implements CategoriaService {
         List<Categoria> existentes = categoriaRepository.findByUsuarioId(usuario.getId());
         if (existentes.isEmpty()) {
             List<Categoria> padrao = Categoria.criarCatalogoPadrao(usuario);
-            List<Categoria> salvas = categoriaRepository.saveAll(padrao);
-            return salvas.stream()
-                    .map(DtoMapper::toCategoriaResponse)
-                    .collect(Collectors.toList());
+            try {
+                List<Categoria> salvas = categoriaRepository.saveAll(padrao);
+                return salvas.stream()
+                        .map(DtoMapper::toCategoriaResponse)
+                        .collect(Collectors.toList());
+            } catch (DataIntegrityViolationException e) {
+                // Em caso de concorrência simultânea, a outra thread já gravou o catálogo padrão
+                return categoriaRepository.findByUsuarioId(usuario.getId()).stream()
+                        .map(DtoMapper::toCategoriaResponse)
+                        .collect(Collectors.toList());
+            }
         }
         return existentes.stream()
                 .map(DtoMapper::toCategoriaResponse)

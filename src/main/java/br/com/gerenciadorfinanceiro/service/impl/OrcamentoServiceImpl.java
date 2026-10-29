@@ -13,6 +13,7 @@ import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.service.CategoriaService;
 import br.com.gerenciadorfinanceiro.service.OrcamentoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,9 +88,14 @@ public class OrcamentoServiceImpl implements OrcamentoService {
                 request.observacao()
         );
 
-        Orcamento salvo = orcamentoRepository.save(orcamento);
-        BigDecimal gasto = calcularTotalGasto(salvo.getCategoria().getId(), salvo.getAno(), salvo.getMes(), usuarioId);
-        return DtoMapper.toOrcamentoResponse(salvo, gasto);
+        try {
+            Orcamento salvo = orcamentoRepository.save(orcamento);
+            BigDecimal gasto = calcularTotalGasto(salvo.getCategoria().getId(), salvo.getAno(), salvo.getMes(), usuarioId);
+            return DtoMapper.toOrcamentoResponse(salvo, gasto);
+        } catch (DataIntegrityViolationException e) {
+            throw new RegraNegocioException("Já existe um orçamento cadastrado para a categoria '" + categoria.getNome() +
+                    "' na competência " + String.format("%02d/%d", request.mes(), request.ano()) + ".");
+        }
     }
 
     @Override

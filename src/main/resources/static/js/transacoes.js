@@ -215,7 +215,7 @@ const transacoesModule = {
                     </td>
                     <td class="px-5 py-3.5 whitespace-nowrap text-right text-xs">
                         ${t.status === 'PENDENTE' ? `
-                            <button onclick="transacoesModule.efetivarTransacao(${t.id})" title="Marcar como Paga e Atualizar Saldo" class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-bold text-xs transition-colors mr-1">
+                            <button onclick="transacoesModule.efetivarTransacao(${t.id}, this)" title="Marcar como Paga e Atualizar Saldo" class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-bold text-xs transition-colors mr-1">
                                 <i class="fas fa-check text-[10px]"></i> Pagar
                             </button>
                         ` : ''}
@@ -314,6 +314,7 @@ const transacoesModule = {
 
     async handleSaveTransacao(e) {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
         const id = document.getElementById('transacao-id').value;
         const descricao = document.getElementById('transacao-descricao').value.trim();
         const valor = parseFloat(document.getElementById('transacao-valor').value);
@@ -336,6 +337,7 @@ const transacoesModule = {
             return;
         }
 
+        setButtonSubmitting(submitBtn, true, 'Salvando...');
         try {
             if (id) {
                 // Edição de transação existente
@@ -412,6 +414,8 @@ const transacoesModule = {
             }
         } catch (error) {
             showToast(error.message || 'Erro ao salvar transação.', 'error');
+        } finally {
+            setButtonSubmitting(submitBtn, false);
         }
     },
 
