@@ -70,8 +70,8 @@ class TransferenciaServiceTest {
         assertEquals(new BigDecimal("700.00"), contaOrigem.getSaldo());
         assertEquals(new BigDecimal("500.00"), contaDestino.getSaldo());
 
-        verify(contaService).salvarEntidade(contaOrigem);
-        verify(contaService).salvarEntidade(contaDestino);
+        verify(contaService).debitarSaldo(10L, new BigDecimal("300.00"));
+        verify(contaService).creditarSaldo(20L, new BigDecimal("300.00"));
 
         ArgumentCaptor<Transacao> captor = ArgumentCaptor.forClass(Transacao.class);
         verify(transacaoRepository, times(2)).save(captor.capture());
@@ -96,11 +96,13 @@ class TransferenciaServiceTest {
     void deveLancarExcecaoSaldoInsuficiente() {
         when(contaService.buscarEntidadePorId(10L, 1L)).thenReturn(contaOrigem);
         when(contaService.buscarEntidadePorId(20L, 1L)).thenReturn(contaDestino);
+        doThrow(new SaldoInsuficienteException("Saldo insuficiente"))
+                .when(contaService).debitarSaldo(10L, new BigDecimal("1500.00"));
 
         assertThrows(SaldoInsuficienteException.class, () ->
                 transferenciaService.transferir(1L, 10L, 20L, new BigDecimal("1500.00")));
 
-        verify(contaService, never()).salvarEntidade(any());
+        verify(contaService, never()).creditarSaldo(any(), any());
         verify(transacaoRepository, never()).save(any());
     }
 

@@ -54,11 +54,11 @@ public class TransferenciaServiceImpl implements TransferenciaService {
         Conta origem = contaService.buscarEntidadePorId(contaOrigemId, usuarioId);
         Conta destino = contaService.buscarEntidadePorId(contaDestinoId, usuarioId);
 
-        origem.debitar(quantia);
-        destino.creditar(quantia);
-
-        contaService.salvarEntidade(origem);
-        contaService.salvarEntidade(destino);
+        // Operações atômicas no banco com conferência de saldo
+        contaService.debitarSaldo(origem.getId(), quantia);
+        contaService.creditarSaldo(destino.getId(), quantia);
+        try { origem.debitar(quantia); } catch (Exception ignored) {}
+        try { destino.creditar(quantia); } catch (Exception ignored) {}
 
         Categoria catSaida = resolverCategoriaTransferencia(origem.getUsuario(), TipoTransacao.DESPESA);
         Categoria catEntrada = resolverCategoriaTransferencia(destino.getUsuario(), TipoTransacao.RECEITA);

@@ -3,6 +3,7 @@ package br.com.gerenciadorfinanceiro.repository;
 import br.com.gerenciadorfinanceiro.model.Transacao;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,6 +19,11 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long>, Jpa
     List<Transacao> findByContaIdAndUsuarioId(Long contaId, Long usuarioId);
     List<Transacao> findByRecorrenciaId(Long recorrenciaId);
     List<Transacao> findByUsuarioIdAndRecorrenciaIsNullAndDescricaoIgnoreCase(Long usuarioId, String descricao);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Transacao t SET t.status = br.com.gerenciadorfinanceiro.model.enums.StatusTransacao.PAGA " +
+           "WHERE t.id = :id AND t.usuario.id = :usuarioId AND t.status = br.com.gerenciadorfinanceiro.model.enums.StatusTransacao.PENDENTE")
+    int liquidarTransacaoPendente(@Param("id") Long id, @Param("usuarioId") Long usuarioId);
 
     @Query("SELECT COALESCE(SUM(t.valor), 0) FROM Transacao t " +
            "WHERE t.usuario.id = :usuarioId " +

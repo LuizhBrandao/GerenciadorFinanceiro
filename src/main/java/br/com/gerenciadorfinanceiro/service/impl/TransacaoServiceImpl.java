@@ -245,26 +245,35 @@ public class TransacaoServiceImpl implements TransacaoService {
     @Transactional
     public TransacaoResponseDto efetivar(Long id, Long usuarioId) {
         Transacao transacao = buscarEntidadePorId(id, usuarioId);
-        if (transacao.getStatus() != StatusTransacao.PAGA) {
-            transacao.liquidar();
-            if (transacao.getConta() != null) {
-                atualizarSaldoConta(transacao.getConta(), transacao.getTipo(), transacao.getValor(), false);
-            }
-            transacao = transacaoRepository.save(transacao);
+        if (transacao.getStatus() == StatusTransacao.PAGA) {
+            return DtoMapper.toTransacaoResponse(transacao);
         }
-        return DtoMapper.toTransacaoResponse(transacao);
+
+        int afetados = transacaoRepository.liquidarTransacaoPendente(id, usuarioId);
+        if (afetados == 0) {
+            Transacao jaLiquidada = buscarEntidadePorId(id, usuarioId);
+            return DtoMapper.toTransacaoResponse(jaLiquidada);
+        }
+
+        if (transacao.getConta() != null) {
+            atualizarSaldoConta(transacao.getConta(), transacao.getTipo(), transacao.getValor(), false);
+        }
+
+        Transacao liquidada = buscarEntidadePorId(id, usuarioId);
+        return DtoMapper.toTransacaoResponse(liquidada);
     }
 
     private void atualizarSaldoConta(Conta conta, TipoTransacao tipo, BigDecimal valor, boolean isEstorno) {
-        if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
+        if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0 || conta == null || conta.getId() == null) {
             return;
         }
 
         if ((tipo == TipoTransacao.RECEITA && !isEstorno) || (tipo == TipoTransacao.DESPESA && isEstorno)) {
-            conta.creditar(valor);
+            contaService.creditarSaldo(conta.getId(), valor);
+            try { conta.creditar(valor); } catch (Exception ignored) {}
         } else if ((tipo == TipoTransacao.DESPESA && !isEstorno) || (tipo == TipoTransacao.RECEITA && isEstorno)) {
-            conta.debitar(valor);
+            contaService.debitarSaldo(conta.getId(), valor);
+            try { conta.debitar(valor); } catch (Exception ignored) {}
         }
-        contaService.salvarEntidade(conta);
     }
 }

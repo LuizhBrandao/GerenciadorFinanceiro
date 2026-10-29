@@ -14,6 +14,7 @@ import br.com.gerenciadorfinanceiro.repository.TransacaoRepository;
 import br.com.gerenciadorfinanceiro.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Component
+@Profile("!test")
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
@@ -49,7 +51,9 @@ public class DataInitializer implements CommandLineRunner {
             // 3. Criar Contas Bancárias Demo
             Conta nubank = new Conta(demoUser, "Nubank - Corrente", "Nubank", TipoConta.CORRENTE, new BigDecimal("4250.00"));
             Conta itau = new Conta(demoUser, "Itaú - Reserva", "Itaú", TipoConta.POUPANCA, new BigDecimal("12000.00"));
-            contaRepository.saveAll(List.of(nubank, itau));
+            List<Conta> contasSalvas = contaRepository.saveAll(List.of(nubank, itau));
+            nubank = contasSalvas.get(0);
+            itau = contasSalvas.get(1);
 
             // 4. Buscar categorias criadas para vincular transações demo
             Categoria catSalario = categoriasPadrao.stream().filter(c -> c.getNome().contains("Salário")).findFirst().orElse(null);

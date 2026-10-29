@@ -7,6 +7,7 @@ import br.com.gerenciadorfinanceiro.controller.dto.ResumoSaldosDto;
 import br.com.gerenciadorfinanceiro.controller.dto.TransacaoResponseDto;
 import br.com.gerenciadorfinanceiro.controller.mapper.DtoMapper;
 import br.com.gerenciadorfinanceiro.exception.EntidadeNaoEncontradaException;
+import br.com.gerenciadorfinanceiro.exception.SaldoInsuficienteException;
 import br.com.gerenciadorfinanceiro.model.Conta;
 import br.com.gerenciadorfinanceiro.model.Transacao;
 import br.com.gerenciadorfinanceiro.model.Usuario;
@@ -188,5 +189,33 @@ public class ContaServiceImpl implements ContaService {
     @Transactional
     public Conta salvarEntidade(Conta conta) {
         return contaRepository.save(conta);
+    }
+
+    @Override
+    @Transactional
+    public void debitarSaldo(Long contaId, BigDecimal valor) {
+        if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("O valor para débito deve ser maior que zero.");
+        }
+        int linhasAfetadas = contaRepository.debitarSaldoSeSuficiente(contaId, valor);
+        if (linhasAfetadas == 0) {
+            Conta conta = contaRepository.findById(contaId)
+                    .orElseThrow(() -> new EntidadeNaoEncontradaException("Conta não encontrada."));
+            throw new SaldoInsuficienteException(
+                    String.format("Saldo insuficiente na conta '%s'. Saldo atual: R$ %.2f, Valor requerido: R$ %.2f",
+                            conta.getNome(), conta.getSaldo(), valor));
+        }
+    }
+
+    @Override
+    @Transactional
+    public void creditarSaldo(Long contaId, BigDecimal valor) {
+        if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("O valor para crédito deve ser maior que zero.");
+        }
+        int linhasAfetadas = contaRepository.creditarSaldo(contaId, valor);
+        if (linhasAfetadas == 0) {
+            throw new EntidadeNaoEncontradaException("Conta não encontrada para crédito.");
+        }
     }
 }

@@ -38,4 +38,8 @@ public interface ContaService {
     List<TransacaoResponseDto> obterExtratoDetalhado(Long contaId, Long usuarioId);
 
     Conta salvarEntidade(Conta conta);
+
+    void debitarSaldo(Long contaId, BigDecimal valor);
+
+    void creditarSaldo(Long contaId, BigDecimal valor);
 }

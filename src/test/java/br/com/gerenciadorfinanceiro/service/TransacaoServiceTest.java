@@ -91,7 +91,7 @@ class TransacaoServiceTest {
         assertEquals(new BigDecimal("200.00"), response.valor());
         assertEquals(new BigDecimal("800.00"), conta.getSaldo());
 
-        verify(contaService).salvarEntidade(conta);
+        verify(contaService).debitarSaldo(10L, new BigDecimal("200.00"));
         verify(transacaoRepository).save(any(Transacao.class));
     }
 
