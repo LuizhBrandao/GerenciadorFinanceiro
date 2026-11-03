@@ -190,6 +190,7 @@ public class ConcorrenciaEntidadesIntegrationTest {
                 "Recorrência de teste"
         );
         var recResponse = transacaoRecorrenteService.salvar(recRequest, usuario);
+        transacaoRepository.deleteAll();
 
         int threads = 2;
         ExecutorService executor = Executors.newFixedThreadPool(threads);

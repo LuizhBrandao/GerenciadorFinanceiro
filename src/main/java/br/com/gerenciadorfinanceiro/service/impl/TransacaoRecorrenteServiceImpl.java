@@ -28,6 +28,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -166,7 +168,18 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
     public TransacaoResponseDto lancarInstancia(Long id, Long usuarioId, LocalDate dataLancamento) {
         TransacaoRecorrente recorrencia = buscarEntidadePorId(id, usuarioId);
         LocalDate dataAlvo = dataLancamento != null ? dataLancamento : calcularDataAlvo(recorrencia, LocalDate.now());
-        Transacao t = criarEGravarTransacao(recorrencia, dataAlvo, StatusTransacao.PAGA);
+        String chave = "REC_" + recorrencia.getId() + "_" + dataAlvo;
+
+        Optional<Transacao> existenteOpt = transacaoRepository.findByChaveRecorrencia(chave);
+        if (existenteOpt.isPresent()) {
+            Transacao existente = existenteOpt.get();
+            if (existente.getStatus() == StatusTransacao.PAGA) {
+                throw new RegraNegocioException("Esta ocorrência da transação recorrente já foi lançada.");
+            }
+            return transacaoService.efetivar(existente.getId(), usuarioId);
+        }
+
+        Transacao t = criarEGravarTransacao(recorrencia, dataAlvo, StatusTransacao.PAGA, true);
         return DtoMapper.toTransacaoResponse(t);
     }
 
@@ -383,8 +396,15 @@ public class TransacaoRecorrenteServiceImpl implements TransacaoRecorrenteServic
     }
 
     private Transacao criarEGravarTransacao(TransacaoRecorrente rec, LocalDate dataTransacao, StatusTransacao status) {
+        return criarEGravarTransacao(rec, dataTransacao, status, false);
+    }
+
+    private Transacao criarEGravarTransacao(TransacaoRecorrente rec, LocalDate dataTransacao, StatusTransacao status, boolean lancamentoManual) {
         String chave = "REC_" + rec.getId() + "_" + dataTransacao;
         if (transacaoRepository.existsByChaveRecorrencia(chave)) {
+            if (lancamentoManual) {
+                throw new RegraNegocioException("Esta ocorrência da transação recorrente já foi lançada.");
+            }
             return transacaoRepository.findByChaveRecorrencia(chave).orElse(null);
         }
 
