@@ -30,3 +30,9 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
     tagsSorter: alpha
+
+# Configurações de Webhooks e Pagamentos
+webhook:
+  stripe:
+    secret: ${STRIPE_WEBHOOK_SECRET:whsec_test_secret_key_default}
+    tolerance-seconds: 300

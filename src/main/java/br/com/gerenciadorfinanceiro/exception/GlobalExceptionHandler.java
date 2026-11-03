@@ -28,6 +28,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(err);
     }
 
+    @ExceptionHandler(AssinaturaInvalidaException.class)
+    public ResponseEntity<StandardError> invalidSignature(AssinaturaInvalidaException e, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        StandardError err = new StandardError(Instant.now(), status.value(), "Bad Request", e.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(status).body(err);
+    }
+
     @ExceptionHandler(RegraNegocioException.class)
     public ResponseEntity<StandardError> businessRule(RegraNegocioException e, HttpServletRequest request) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
