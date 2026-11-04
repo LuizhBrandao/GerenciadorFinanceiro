@@ -36,6 +36,13 @@ Esta Wiki reúne as decisões de Engenharia Upstream (Levantamento de Requisitos
    * Mapeamento de Códigos HTTP e Resiliência (HTTP 400, 404, 409, 422)
    * Governança de Portões de Qualidade (DoR e DoD)
 
+6. [**Guia de Ambientes: Dev, Staging e Prod**](ambientes_dev_staging_prod.md)
+   * Matriz Comparativa (Dev vs. Staging vs. Prod)
+   * Configuração de Profiles do Spring Boot e HikariCP
+   * Isolamento de Redes e Bancos no Docker Compose
+   * Governança de Branches Git (`develop`, `staging`, `main`)
+   * Script de Automação e Pipelines de CI/CD
+
 ---
 
 > [!NOTE]

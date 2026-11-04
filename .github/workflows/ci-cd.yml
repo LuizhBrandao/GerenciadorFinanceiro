@@ -1,0 +1,52 @@
+name: CI/CD Pipeline - Multi-Ambiente (Dev, Staging, Prod)
+
+on:
+  push:
+    branches:
+      - develop
+      - staging
+      - main
+  pull_request:
+    branches:
+      - develop
+      - staging
+      - main
+
+jobs:
+  test-and-verify:
+    name: "Qualidade de Código & Testes Unitários"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 21 (Eclipse Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Executar Testes com Perfil de Teste
+        run: mvn clean test -Dspring.profiles.active=test
+
+  docker-build:
+    name: "Validação de Build de Imagem Docker"
+    needs: test-and-verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validar Build da Imagem
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: gerenciador-financeiro:${{ github.ref_name }}

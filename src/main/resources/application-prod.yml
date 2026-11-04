@@ -1,0 +1,60 @@
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: ProdHikariPool
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      leak-detection-threshold: 2000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+# Desativa Swagger / Documentação pública em Produção por segurança
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Proíbe terminantemente carga de dados demo/teste em Produção
+app:
+  seed-demo-data: false
+
+# Probes de saúde seguros para balanceadores e orquestradores (Kubernetes / Docker)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+# Logs seguros e enxutos para evitar vazamento de dados de clientes em Produção
+logging:
+  level:
+    root: WARN
+    br.com.gerenciadorfinanceiro: INFO
+    org.springframework.web: WARN
+    org.hibernate: ERROR

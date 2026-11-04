@@ -220,6 +220,20 @@ Antes de iniciar, certifique-se de ter instalado em sua maquina:
 
 ---
 
+## Ambientes de Execução (Dev, Staging, Prod)
+
+A aplicação conta com arquitetura multi-ambiente isolada com perfis do Spring Boot, conteinerização Docker Compose e governança de branches Git:
+
+| Ambiente | Perfil Spring | Branch Git | Finalidade | Swagger UI | Seed Demo |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Dev** | `dev` | `develop` | Desenvolvimento local, testes e depuração | Ativado (`:8080`) | Ativado (`teste@financeiro.com`) |
+| **Staging** | `staging` | `staging` | Homologação, validação de QA e pré-produção | Ativado (`:8081`) | Desativado |
+| **Prod** | `prod` | `main` | Produção em nuvem / Oracle Cloud | **Desativado** | Desativado |
+
+Para mais detalhes arquiteturais, consulte a [Wiki de Ambientes](docs/wiki/ambientes_dev_staging_prod.md).
+
+---
+
 ## Como Executar a Aplicacao
 
 ### 1. Clonar o repositorio
@@ -228,24 +242,55 @@ git clone https://github.com/LuizhBrandao/GerenciadorFinanceiro.git
 cd GerenciadorFinanceiro
 ```
 
-### 2. Iniciar o Banco de Dados (MySQL via Docker)
-Suba o container do banco de dados na porta 3306:
-```bash
-docker-compose up -d
-```
+### 2. Executando nos Ambientes
 
-### 3. Executar o Backend
-Execute a aplicacao via Maven:
-```bash
-mvn spring-boot:run
-```
-O servidor iniciara em `http://localhost:8080`.
+#### A) Ambiente de Desenvolvimento (Dev)
+* **Opção 1: Banco no Docker + Aplicação na IDE (Recomendado para Dev)**
+  ```bash
+  # Inicia apenas o MySQL 8.4 na porta 3306 (financeiro_dev_db)
+  docker compose up -d
 
-### 4. Acessar o Frontend
-- Pelo proprio Spring Boot: Abra seu navegador em:
+  # Executa a aplicação com perfil dev
+  mvn spring-boot:run -Dspring-boot.run.profiles=dev
   ```
-  http://localhost:8080/
+* **Opção 2: Stack Completa no Docker via Script:**
+  ```powershell
+  # No Windows PowerShell:
+  .\scripts\manage-env.ps1 -Environment dev -Action up -FullDev
+
+  # No Linux/macOS:
+  ./scripts/manage-env.sh dev up --full
   ```
+* **Acessar Dev:**
+  - Aplicação / Frontend: [http://localhost:8080](http://localhost:8080)
+  - Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+  - Usuário padrão gerado: `teste@financeiro.com` / Senha: `123456`
+
+#### B) Ambiente de Homologação / Staging (Porta 8081)
+```powershell
+# No Windows PowerShell:
+.\scripts\manage-env.ps1 -Environment staging -Action up
+
+# Ou via Docker Compose diretamente:
+docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build
+```
+* **Acessar Staging:**
+  - Aplicação / Frontend: [http://localhost:8081](http://localhost:8081)
+  - Swagger UI: [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
+  - Healthcheck: [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health)
+
+#### C) Ambiente de Produção (Prod)
+```powershell
+# No Windows PowerShell:
+.\scripts\manage-env.ps1 -Environment prod -Action up
+
+# Ou via Docker Compose diretamente:
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+* **Acessar Prod:**
+  - Aplicação: [http://localhost:80](http://localhost:80)
+  - Healthcheck: [http://localhost:80/actuator/health](http://localhost:80/actuator/health)
+  - *(Swagger UI e endpoints de depuração são desativados em produção por segurança)*
 
 ---
 

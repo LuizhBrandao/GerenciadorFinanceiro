@@ -23,7 +23,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Component
-@Profile("!test")
+@Profile("dev")
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 

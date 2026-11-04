@@ -1,0 +1,58 @@
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+
+spring:
+  config:
+    activate:
+      on-profile: staging
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:financeiro_staging_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo&characterEncoding=UTF-8}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:financeiro_staging}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:staging_secret_123}}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: StagingHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 3
+      connection-timeout: 30000
+      idle-timeout: 300000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+# Swagger habilitado para a equipe de QA e frontend testarem contratos
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# Desativa carga automática de dados fake em homologação
+app:
+  seed-demo-data: false
+
+# Métricas e monitoramento de saúde para testes de carga e staging
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Nível de logs moderado para staging
+logging:
+  level:
+    root: INFO
+    br.com.gerenciadorfinanceiro: INFO
+    org.springframework.web: INFO

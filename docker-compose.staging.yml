@@ -1,0 +1,59 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: financeiro_staging_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-staging_root_pass_123}
+      MYSQL_DATABASE: ${DB_NAME:-financeiro_staging_db}
+      MYSQL_USER: ${DB_USER:-financeiro_staging}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-staging_secret_123}
+    ports:
+      - "${DB_PORT:-3307}:3306"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-time-zone=-03:00
+    volumes:
+      - mysqldata_staging:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - staging_network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: financeiro_staging_app
+    restart: always
+    ports:
+      - "${APP_PORT:-8081}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: staging
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${DB_NAME:-financeiro_staging_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo&createDatabaseIfNotExist=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-financeiro_staging}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-staging_secret_123}
+      JWT_SECRET: ${JWT_SECRET:-staging_jwt_secret_token_homolog_security_2026}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_staging_test_secret_key}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - staging_network
+
+volumes:
+  mysqldata_staging:
+
+networks:
+  staging_network:
+    driver: bridge
