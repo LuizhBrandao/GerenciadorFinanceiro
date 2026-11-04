@@ -1,286 +1,320 @@
-#  Gerenciador Financeiro Pessoal
+# Gerenciador Financeiro Pessoal
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg?style=flat&logo=openjdk)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen.svg?style=flat&logo=springboot)](https://spring.io/projects/spring-boot)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg?style=flat&logo=postgresql)](https://www.postgresql.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.4-blue.svg?style=flat&logo=mysql)](https://www.mysql.com/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg?style=flat&logo=docker)](https://www.docker.com/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E.svg?style=flat&logo=javascript)](https://developer.mozilla.org/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC.svg?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Aplicação Full-Stack completa para controle financeiro pessoal, desenvolvida com **Spring Boot 3 (Java 21)**, banco de dados **PostgreSQL**, conteinerização com **Docker**, arquitetura orientada a domínio (**Domain-Driven Design - DDD**), e uma interface frontend moderna e responsiva em **JavaScript (Single Page Application)** com **Tailwind CSS** e gráficos interativos **Chart.js**.
+Aplicacao Full-Stack completa para controle financeiro pessoal e gestao de pagamentos resilientes, desenvolvida com Spring Boot 3 (Java 21), banco de dados MySQL 8, conteinerizacao com Docker, arquitetura orientada a dominio (Domain-Driven Design - DDD), politicas estritas de idempotencia ponta a ponta e uma interface frontend moderna e responsiva em JavaScript (Single Page Application) com Tailwind CSS e graficos interativos Chart.js.
 
 ---
 
-##  Sumário
+## Sumario
 
-- [Visão Geral & Arquitetura](#-visão-geral--arquitetura)
-- [Wiki de Engenharia DDD](#-wiki-de-engenharia-ddd)
-- [Funcionalidades Principais](#-funcionalidades-principais)
-- [Tecnologias Utilizadas](#-tecnologias-utilizadas)
-- [Estrutura do Projeto](#-estrutura-do-projeto)
-- [Pré-requisitos](#-pré-requisitos)
-- [Como Executar a Aplicação](#-como-executar-a-aplicação)
-- [Documentação da API (Swagger / OpenAPI)](#-documentação-da-api-swagger--openapi)
-- [Endpoints da API REST](#-endpoints-da-api-rest)
-- [Testes](#-testes)
-- [Autor](#-autor)
+- [Visao Geral e Arquitetura](#visao-geral-e-arquitetura)
+- [Wiki de Engenharia DDD](#wiki-de-engenharia-ddd)
+- [Arquitetura de Idempotencia e Pagamentos](#arquitetura-de-idempotencia-e-pagamentos)
+- [Funcionalidades Principais](#funcionalidades-principais)
+- [Tecnologias Utilizadas](#tecnologias-utilizadas)
+- [Estrutura do Projeto](#estrutura-do-projeto)
+- [Pre-requisitos](#pre-requisitos)
+- [Como Executar a Aplicacao](#como-executar-a-aplicacao)
+- [Documentacao da API (Swagger / OpenAPI)](#documentacao-da-api-swagger--openapi)
+- [Endpoints da API REST](#endpoints-da-api-rest)
+- [Testes Automatizados](#testes-automatizados)
+- [Autor](#autor)
 
 ---
 
-##  Visão Geral & Arquitetura
+## Visao Geral e Arquitetura
 
-O sistema adota o padrão de arquitetura em 4 camadas (**Domain-Driven Design**) no backend e uma **SPA modular** no frontend:
+O sistema adota o padrao de arquitetura em 4 camadas (Domain-Driven Design) no backend e uma SPA modular no frontend:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                 Frontend SPA (HTML5 / JS / CSS)             │
-│   (Dashboard, Gráficos Chart.js, Gestão de Contas, Filtros) │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ HTTP / JSON (JWT Bearer)
-┌──────────────────────────────▼──────────────────────────────┐
-│                  Presentation Layer (Controllers & DTOs)    │
-│  - Spring Security + JWT Filter (Stateless)                 │
-├─────────────────────────────────────────────────────────────┤
-│                  Application Layer (Service Implementations)│
-│  - Orquestração de Casos de Uso e Transações (@Transactional)│
-├─────────────────────────────────────────────────────────────┤
-│                  Domain Layer (O Coração do Software)       │
-│  - Agregados Ricos (Conta, Transacao, Orcamento, Categoria) │
-│  - Value Objects Imutáveis (ValorMonetario, Competencia)    │
-├─────────────────────────────────────────────────────────────┤
-│                  Infrastructure Layer                       │
-│  - Repositories (Spring Data JPA + Specifications)          │
-│  - Consultas Agregadas CQRS no Banco de Dados               │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ JDBC
-┌──────────────────────────────▼──────────────────────────────┐
-│                    PostgreSQL 15 (Docker)                   │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|                 Frontend SPA (HTML5 / JS / CSS)             |
+|   (Dashboard, Graficos Chart.js, Gestao de Contas, Filtros) |
++------------------------------+------------------------------+
+                               | HTTP / JSON (JWT Bearer)
++------------------------------v------------------------------+
+|                  Presentation Layer (Controllers & DTOs)    |
+|  - Spring Security + JWT Filter (Stateless)                 |
+|  - IdempotencyFilter (Header Idempotency-Key)               |
+|  - WebhookController (HMAC-SHA256 Raw Body Verifier)        |
++-------------------------------------------------------------+
+|                  Application Layer (Service Implementations)|
+|  - Orquestracao de Casos de Uso e Transacoes                |
+|  - IdempotencyService & WebhookService                      |
+|  - WebhookAsyncWorker (Execucao assincrona desacoplada)     |
++-------------------------------------------------------------+
+|                  Domain Layer (O Coracao do Software)       |
+|  - Agregados Ricos (Conta, Transacao, Orcamento, Categoria) |
+|  - Entidades de Idempotencia (EventoWebhook, RegistroIdem.) |
+|  - Value Objects Imutaveis (ValorMonetario, Competencia)    |
++-------------------------------------------------------------+
+|                  Infrastructure Layer                       |
+|  - Repositories (Spring Data JPA + Specifications)          |
+|  - GatewayPaymentClient (Integracao Outbound com UUID v4)   |
+|  - Consultas Agregadas CQRS no Banco de Dados               |
++------------------------------+------------------------------+
+                               | JDBC
++------------------------------v------------------------------+
+|                    MySQL 8.4 (Docker)                   |
++-------------------------------------------------------------+
 ```
 
 ---
 
-##  Wiki de Engenharia DDD
+## Wiki de Engenharia DDD
 
-A documentação detalhada de requisitos, modelagem de domínio e governança técnica está centralizada na [**Wiki do Projeto (docs/wiki/)**](docs/wiki/README.md):
+A documentacao detalhada de requisitos, modelagem de dominio e governanca tecnica esta centralizada na [Wiki do Projeto (docs/wiki/)](docs/wiki/README.md):
 
-*  [**1. Visão Geral, Diagnóstico de Riscos e Anatomia da Solução**](docs/wiki/visao_geral_e_dominio.md): Matriz dos 4 Grandes Riscos de Marty Cagan, Personas, AS IS vs. TO BE e Requisitos.
-*  [**2. Dicionário da Linguagem Ubíqua e Contextos Delimitados**](docs/wiki/linguagem_ubiqua.md): Vocabulário oficial e Context Map entre Identidade, Contas, Transações e Orçamentos.
-*  [**3. Arquitetura e Design Tático DDD**](docs/wiki/arquitetura_e_design_tatico.md): 4 camadas, Value Objects, Comandos de Agregados, Optimistic Locking (`@Version`) e desativação do OSIV (`open-in-view: false`).
-*  [**4. Domain Storytelling e Event Storming**](docs/wiki/event_storming_e_fluxos.md): Narrativas de negócios, eventos de domínio, políticas e mitigação de hotspots.
-*  [**5. Contratos de API REST e Tratamento de Exceções**](docs/wiki/api_e_contratos.md): Especificação dos endpoints, DTOs e códigos de erro (HTTP 400, 404, 409, 422).
+* [1. Visao Geral, Diagnostico de Riscos e Anatomia da Solucao](docs/wiki/visao_geral_e_dominio.md): Matriz dos 4 Grandes Riscos de Marty Cagan, Personas, AS IS vs. TO BE e Requisitos.
+* [2. Dicionario da Linguagem Ubiqua e Contextos Delimitados](docs/wiki/linguagem_ubiqua.md): Vocabulario oficial e Context Map entre Identidade, Contas, Transacoes e Orcamentos.
+* [3. Arquitetura e Design Tatico DDD](docs/wiki/arquitetura_e_design_tatico.md): 4 camadas, Value Objects, Comandos de Agregados, Optimistic Locking (@Version) e desativacao do OSIV (open-in-view: false).
+* [4. Domain Storytelling e Event Storming](docs/wiki/event_storming_e_fluxos.md): Narrativas de negocios, eventos de dominio, politicas e mitigacao de hotspots.
+* [5. Contratos de API REST e Tratamento de Excecoes](docs/wiki/api_e_contratos.md): Especificacao dos endpoints, DTOs e codigos de erro (HTTP 400, 404, 409, 422).
 
 ---
 
-##  Funcionalidades Principais
+## Arquitetura de Idempotencia e Pagamentos
 
-### 1. Autenticação & Segurança Desacoplada
-- Cadastro e login de usuários gerenciados pela camada de aplicação (`AuthService`) com senhas criptografadas via **BCrypt**.
-- Emissão e validação de tokens **JWT (JSON Web Token)** stateless.
-- Proteção de rotas da API com Spring Security e injeção automática do usuário autenticado (`@AuthenticationPrincipal`).
-- Configuração de **CORS** para desenvolvimento desacoplado.
+O sistema implementa politicas robustas de idempotencia ponta a ponta para eliminar efeitos duplicados em cobrancas, webhooks e operacoes financeiras:
+
+### 1. Webhooks Inbound Resilientes (/webhooks/stripe)
+- Verificacao de Assinatura no Corpo Bruto: Validacao de assinatura HMAC-SHA256 executada byte a byte em tempo constante com `MessageDigest.isEqual`, antes de qualquer desserializacao JSON, prevenindo ataques de timing e adulteracoes.
+- Padrao Insert-First Atomico: Ao receber um evento de webhook, a aplicacao tenta inserir o `event_id` na tabela `eventos_webhook` em transacao isolada (`REQUIRES_NEW`). Se o identificador ja existir, a excecao de integridade unica e interceptada e a API devolve HTTP 200 de imediato, sem reexecucao.
+- Independencia da Ordem de Eventos: O processamento nao confia no payload do webhook para o estado final; busca o objeto atualizado de forma autoritativa na API do gateway.
+- Desacoplamento Assincrono: Responde HTTP 200 prontamente e delega o processamento de negocio para um pool de threads dedicado (`webhookTaskExecutor`).
+
+### 2. Idempotencia nos Endpoints Inbound do App (Header Idempotency-Key)
+- Interceptador `IdempotencyFilter`: Requisicoes mutantes com o header `Idempotency-Key` sao avaliadas e cacheadas na tabela `registros_idempotencia`.
+- Replay de Resposta Identica: Chamadas repetidas com a mesma chave e mesmo corpo recebem a resposta original gravada (mesmo HTTP status e payload JSON) acompanhada do header `Idempotent-Replayed: true`.
+- Concorrencia Protegida: Requisicoes simultaneas com a mesma chave recebem HTTP 409 Conflict enquanto o primeiro processamento estiver ativo.
+- Validacao de Payload: Se a mesma chave for reenviada com corpo divergente (hash SHA-256 diferente), a requisicao e rejeitada com HTTP 422 Unprocessable Entity.
+- Bloqueio de Dados Pessoais (PII): Chaves de idempotencia que contenham e-mail ou CPF sao sumariamente rejeitadas com HTTP 400 Bad Request.
+
+### 3. Chamadas Outbound ao Gateway de Pagamentos
+- Clientes de integracao (`GatewayPaymentClient`, `StripeGatewayPaymentClient`) geram chaves de idempotencia padrao UUID v4 atreladas a operacao de negocio e as reutilizam em caso de retentativas (retries), garantindo protecao contra cobrancas duplicadas.
+
+---
+
+## Funcionalidades Principais
+
+### 1. Autenticacao e Seguranca Desacoplada
+- Cadastro e login de usuarios gerenciados pela camada de aplicacao (`AuthService`) com senhas criptografadas via BCrypt.
+- Emissao e validacao de tokens JWT (JSON Web Token) stateless.
+- Protecao de rotas da API com Spring Security e injecao automatica do usuario autenticado (`@AuthenticationPrincipal`).
+- Configuracao de CORS para desenvolvimento desacoplado com liberacao dos headers de idempotencia.
 
 ### 2. Dashboard Financeiro Otimizado (CQRS Leve)
 - Consultas agregadas diretamente no banco de dados relacional:
-  - **Saldo Consolidado Total** (contas correntes, poupanças e investimentos).
-  - **Total de Receitas do Mês** e **Total de Despesas do Mês** (desconsiderando transferências patrimoniais).
-  - **Balanço Líquido** com indicador visual de saldo positivo ou negativo.
-- Gráficos interativos (**Chart.js**):
-  - *Distribuição de Despesas por Categoria* com percentuais exatos.
-  - *Evolução Mensal Receitas vs Despesas* dos últimos 6 meses.
-- Tabela dinâmica com as 5 transações mais recentes.
+  - Saldo Consolidado Total (contas correntes, poupancas e investimentos).
+  - Total de Receitas do Mes e Total de Despesas do Mes (desconsiderando transferencias patrimoniais).
+  - Balanco Liquido com indicador visual de saldo positivo ou negativo.
+- Graficos interativos (Chart.js):
+  - Distribuicao de Despesas por Categoria com percentuais exatos.
+  - Evolucao Mensal Receitas vs Despesas dos ultimos 6 meses.
+- Tabela dinamica com as 5 transacoes mais recentes.
 
-### 3. Gestão de Contas & Transferências Patrimoniais
-- Cadastro, edição e exclusão de contas bancárias com **Concorrência Otimista** (`@Version`).
-- **Transferência entre contas**: Débito na origem e crédito no destino em uma única transação atômica, registrando lançamentos espelhados no extrato sem duplicar despesas/receitas no Dashboard.
-- **Extrato Detalhado**: Histórico de movimentações ordenado decrescentemente por data (`/contas/{id}/extrato`).
+### 3. Gestao de Contas e Transferencias Patrimoniais
+- Cadastro, edicao e exclusao de contas bancarias com Concorrencia Otimista (`@Version`).
+- Transferencia entre contas: Debito na origem e credito no destino em uma unica transacao atomica, registrando lancamentos espelhados no extrato sem duplicar despesas ou receitas no Dashboard.
+- Extrato Detalhado: Historico de movimentacoes ordenado decrescentemente por data (`/contas/{id}/extrato`).
 
-### 4. Transações Financeiras, Tags e Parcelamento Exato
-- Lançamento de **Receitas** e **Despesas** com atualização automática do saldo da conta.
-- Suporte a **Tags** transversais persistidas em cada transação.
-- **Rateio Exato de Parcelamento**: Divisão de compras a prazo sem perda de centavos via `ValorMonetario`, alocando o resíduo na 1ª parcela (`/transacoes/parcelado`).
-- **Filtros Avançados**: Intervalo de datas, categoria, conta bancária e faixa de valores.
-- Edição e exclusão com estorno automático de saldos.
+### 4. Transacoes Financeiras, Tags e Parcelamento Exato
+- Lancamento de Receitas e Despesas com atualizacao automatica do saldo da conta.
+- Suporte a Tags transversais persistidas em cada transacao.
+- Rateio Exato de Parcelamento: Divisao de compras a prazo sem perda de centavos via `ValorMonetario`, alocando o residuo na primeira parcela (`/transacoes/parcelado`).
+- Filtros Avancados: Intervalo de datas, categoria, conta bancaria e faixa de valores.
+- Edicao e exclusao com estorno automatico de saldos.
 
-### 5. Transações Recorrentes Determinísticas
+### 5. Transacoes Recorrentes Deterministicas
 - Identidade forte via chave estrangeira `recorrencia_id` no banco de dados.
-- Projeção de despesas/receitas periódicas com liquidação automática para datas anteriores ao dia atual.
-- Sincronização automática e sem colisão com transações manuais de mesmo nome.
+- Projecao de despesas e receitas periodicas com liquidacao automatica para datas anteriores ao dia atual.
+- Sincronizacao automatica e sem colisao com transacoes manuais de mesmo nome.
 
-### 6. Orçamentos Mensais por Categoria
-- Definição de limites orçamentários por categoria de despesa e competência mensal (`mês/ano`).
-- Apuração do consumo em tempo real com indicador de limite ultrapassado.
+### 6. Orcamentos Mensais por Categoria
+- Definicao de limites orcamentarios por categoria de despesa e competencia mensal (`mes/ano`).
+- Apuracao do consumo em tempo real com indicador de limite ultrapassado.
 
 ---
 
-##  Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 ### Backend
-- **Java 21**
-- **Spring Boot 3.3.4**
-- **Spring Data JPA / Hibernate** (`open-in-view: false`)
-- **Spring Security**
-- **Java JWT (Auth0)**
-- **PostgreSQL 15** (Driver JDBC)
-- **H2 Database** (para execução de testes unitários e de integração)
-- **SpringDoc OpenAPI 2.6.0** (Swagger UI)
-- **Lombok**
-- **Maven**
+- Java 21
+- Spring Boot 3.3.4
+- Spring Data JPA / Hibernate (open-in-view: false)
+- Spring Security
+- Java JWT (Auth0)
+- MySQL 8.4 (mysql-connector-j)
+- H2 Database (para execucao de testes unitarios e de integracao)
+- SpringDoc OpenAPI 2.6.0 (Swagger UI)
+- Lombok
+- Maven
 
 ### Frontend
-- **JavaScript Moderno (ES6+)**
-- **HTML5 Semântico**
-- **Tailwind CSS** (via CDN)
-- **Chart.js** (gráficos financeiros interativos)
-- **FontAwesome 6** (ícones)
-- **CSS3 Customizado** (animações, modais e notificações toast)
+- JavaScript Moderno (ES6+)
+- HTML5 Semantico
+- Tailwind CSS (via CDN)
+- Chart.js (graficos financeiros interativos)
+- FontAwesome 6 (icones)
+- CSS3 Customizado (animacoes, modais e notificacoes toast)
 
-### DevOps & Ferramentas
-- **Docker & Docker Compose**
-- **Git & GitHub**
+### DevOps e Ferramentas
+- Docker e Docker Compose
+- Git e GitHub
 
 ---
 
-##  Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 Gerenciador Financeiro/
-├── docker-compose.yml                     # Orquestração do PostgreSQL
-├── pom.xml                                # Gerenciamento de dependências Maven
-├── docs/                                  # Central de Documentação
-│   └── wiki/                              # Wiki Viva de Engenharia DDD
-│       ├── README.md                      # Índice da Wiki
-│       ├── visao_geral_e_dominio.md       # Visão do Produto, Riscos e Requisitos
-│       ├── linguagem_ubiqua.md            # Dicionário Ubíquo e Mapa de Contextos
-│       ├── arquitetura_e_design_tatico.md # 4 Camadas, Agregados, VOs e Concorrência
-│       ├── event_storming_e_fluxos.md     # Domain Storytelling e Event Storming
-│       └── api_e_contratos.md             # Contratos REST e Tratamento de Erros
-├── src/
-│   ├── main/
-│   │   ├── java/br/com/gerenciadorfinanceiro/
-│   │   │   ├── config/                    # Configurações (Security, CORS, JWT, OpenAPI)
-│   │   │   ├── controller/                # Camada Presentation (REST Controllers e DTOs)
-│   │   │   ├── exception/                 # StandardError e GlobalExceptionHandler (HTTP 409, etc.)
-│   │   │   ├── model/                     # Camada Domain (Agregados, Entidades e Enums)
-│   │   │   │   └── vo/                    # Value Objects (ValorMonetario, Competencia, Dia)
-│   │   │   ├── repository/                # Camada Infrastructure (Spring Data JPA e Queries CQRS)
-│   │   │   └── service/                   # Camada Application (Interfaces de Serviço e Regras)
-│   │   │       └── impl/                  # Implementações de Serviços de Aplicação
-│   │   └── resources/
-│   │       ├── application.yml            # Configurações do Spring Boot (OSIV desativado)
-│   │       ├── data.sql                   # Carga inicial alinhada com Preferencias e Versão
-│   │       └── static/                    # Frontend SPA
-│   └── test/
-│       ├── java/br/com/gerenciadorfinanceiro/ # Suíte com 30 Testes Unitários Automatizados
-│       └── resources/application-test.yml # Configuração de banco H2 em memória para testes
+|-- docker-compose.yml                     # Orquestracao do MySQL 8
+|-- pom.xml                                # Gerenciamento de dependencias Maven
+|-- docs/                                  # Central de Documentacao
+|   `-- wiki/                              # Wiki Viva de Engenharia DDD
+|       |-- README.md                      # Indice da Wiki
+|       |-- visao_geral_e_dominio.md       # Visao do Produto, Riscos e Requisitos
+|       |-- linguagem_ubiqua.md            # Dicionario Ubiquo e Mapa de Contextos
+|       |-- arquitetura_e_design_tatico.md # 4 Camadas, Agregados, VOs e Concorrencia
+|       |-- event_storming_e_fluxos.md     # Domain Storytelling e Event Storming
+|       `-- api_e_contratos.md             # Contratos REST e Tratamento de Erros
+|-- src/
+|   |-- main/
+|   |   |-- java/br/com/gerenciadorfinanceiro/
+|   |   |   |-- config/                    # Configuracoes (Security, CORS, JWT, OpenAPI, Async)
+|   |   |   |   `-- idempotency/           # Filtro, Request Wrapper e DTOs de Idempotencia
+|   |   |   |-- controller/                # Camada Presentation (REST Controllers e DTOs)
+|   |   |   |-- exception/                 # StandardError e GlobalExceptionHandler
+|   |   |   |-- infrastructure/            # Camada Infrastructure (Gateway Outbound, Security)
+|   |   |   |-- model/                     # Camada Domain (Agregados, Entidades e Enums)
+|   |   |   |   |-- enums/                 # Enums de Dominio e Status de Processamento
+|   |   |   |   `-- vo/                    # Value Objects (ValorMonetario, Competencia, Dia)
+|   |   |   |-- repository/                # Camada Infrastructure (Spring Data JPA e Queries CQRS)
+|   |   |   `-- service/                   # Camada Application (Servicos e Workers Assincronos)
+|   |   |       `-- impl/                  # Implementacoes de Servicos de Aplicacao
+|   |   `-- resources/
+|   |       |-- application.yml            # Configuracoes do Spring Boot (OSIV desativado)
+|   |       |-- data.sql                   # Carga inicial alinhada com Preferencias e Versao
+|   |       |-- migrations/                # Scripts Flyway (V1, V2, V3 com tabelas de idempotencia)
+|   |       `-- static/                    # Frontend SPA
+|   `-- test/
+|       |-- java/br/com/gerenciadorfinanceiro/ # Suite com 64 Testes Automatizados
+|       `-- resources/application-test.yml # Configuracao de banco H2 em memoria para testes
 ```
 
 ---
 
-##  Pré-requisitos
+## Pre-requisitos
 
-Antes de iniciar, certifique-se de ter instalado em sua máquina:
+Antes de iniciar, certifique-se de ter instalado em sua maquina:
 - [JDK 21+](https://www.oracle.com/java/technologies/downloads/#java21)
 - [Apache Maven 3.8+](https://maven.apache.org/)
 - [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/)
 
 ---
 
-##  Como Executar a Aplicação
+## Como Executar a Aplicacao
 
-### 1. Clonar o repositório
+### 1. Clonar o repositorio
 ```bash
 git clone https://github.com/LuizhBrandao/GerenciadorFinanceiro.git
 cd GerenciadorFinanceiro
 ```
 
-### 2. Iniciar o Banco de Dados (PostgreSQL via Docker)
-Suba o container do banco de dados na porta `5433`:
+### 2. Iniciar o Banco de Dados (MySQL via Docker)
+Suba o container do banco de dados na porta 3306:
 ```bash
 docker-compose up -d
 ```
 
 ### 3. Executar o Backend
-Execute a aplicação via Maven:
+Execute a aplicacao via Maven:
 ```bash
 mvn spring-boot:run
 ```
-O servidor iniciará em `http://localhost:8080`.
+O servidor iniciara em `http://localhost:8080`.
 
 ### 4. Acessar o Frontend
-- **Pelo próprio Spring Boot**: Abra seu navegador em:
+- Pelo proprio Spring Boot: Abra seu navegador em:
   ```
   http://localhost:8080/
   ```
 
 ---
 
-##  Documentação da API (Swagger / OpenAPI)
+## Documentacao da API (Swagger / OpenAPI)
 
-Com a aplicação em execução, acesse a documentação interativa do Swagger UI:
-- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **OpenAPI JSON**: [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+Com a aplicacao em execucao, acesse a documentacao interativa do Swagger UI:
+- Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- OpenAPI JSON: [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
 
 ---
 
-##  Endpoints da API REST
+## Endpoints da API REST
 
-| Módulo | Método | Endpoint | Descrição | Autenticação |
+| Modulo | Metodo | Endpoint | Descricao | Autenticacao |
 | :--- | :--- | :--- | :--- | :--- |
-| **Auth** | `POST` | `/auth/register` | Cria uma nova conta de usuário | Pública |
-| **Auth** | `POST` | `/auth/login` | Realiza login e retorna o Token JWT | Pública |
-| **Contas** | `GET` | `/contas` | Lista todas as contas do usuário logado | Bearer Token |
-| **Contas** | `GET` | `/contas/{id}` | Obtém os detalhes de uma conta | Bearer Token |
+| **Auth** | `POST` | `/auth/register` | Cria uma nova conta de usuario | Publica |
+| **Auth** | `POST` | `/auth/login` | Realiza login e retorna o Token JWT | Publica |
+| **Webhooks** | `POST` | `/webhooks/stripe` | Recebe eventos do gateway Stripe com validacao HMAC | Publica (Assinatura Stripe) |
+| **Contas** | `GET` | `/contas` | Lista todas as contas do usuario logado | Bearer Token |
+| **Contas** | `GET` | `/contas/{id}` | Obtem os detalhes de uma conta | Bearer Token |
 | **Contas** | `GET` | `/contas/resumo-saldos` | Retorna o resumo consolidado de saldos | Bearer Token |
 | **Contas** | `GET` | `/contas/{id}/extrato` | Retorna o extrato detalhado de uma conta | Bearer Token |
-| **Contas** | `POST` | `/contas` | Cadastra uma nova conta bancária | Bearer Token |
+| **Contas** | `POST` | `/contas` | Cadastra uma nova conta bancaria (suporta Idempotency-Key) | Bearer Token |
 | **Contas** | `PUT` | `/contas/{id}` | Atualiza dados cadastrais de uma conta | Bearer Token |
-| **Contas** | `DELETE` | `/contas/{id}` | Exclui uma conta bancária | Bearer Token |
-| **Contas** | `POST` | `/contas/transferir` | Realiza transferência patrimonial entre contas | Bearer Token |
-| **Transações** | `GET` | `/transacoes` | Lista todas as transações | Bearer Token |
-| **Transações** | `GET` | `/transacoes/busca` | Filtro avançado (datas, categoria, conta, valores) | Bearer Token |
-| **Transações** | `GET` | `/transacoes/{id}` | Busca transação por ID | Bearer Token |
-| **Transações** | `POST` | `/transacoes` | Cria uma transação simples (com tags) | Bearer Token |
-| **Transações** | `POST` | `/transacoes/parcelado` | Cria compra parcelada sem perda de centavos | Bearer Token |
-| **Transações** | `PUT` | `/transacoes/{id}` | Retifica uma transação existente | Bearer Token |
-| **Transações** | `PATCH` | `/transacoes/{id}/efetivar` | Liquida uma transação pendente | Bearer Token |
-| **Transações** | `DELETE` | `/transacoes/{id}` | Exclui transação e estorna o saldo | Bearer Token |
-| **Recorrências** | `GET` | `/recorrencias` | Lista todas as recorrências cadastradas | Bearer Token |
-| **Recorrências** | `GET` | `/recorrencias/ativas` | Lista apenas as recorrências ativas | Bearer Token |
-| **Recorrências** | `POST` | `/recorrencias` | Cria nova regra e projeta ocorrências | Bearer Token |
-| **Recorrências** | `PUT` | `/recorrencias/{id}` | Atualiza plano e sincroniza filhas | Bearer Token |
-| **Recorrências** | `PATCH` | `/recorrencias/{id}/status` | Ativa ou desativa a recorrência | Bearer Token |
-| **Recorrências** | `DELETE` | `/recorrencias/{id}` | Exclui a regra de recorrência | Bearer Token |
-| **Categorias** | `GET` | `/categorias` | Lista catálogo de categorias cadastradas | Bearer Token |
+| **Contas** | `DELETE` | `/contas/{id}` | Exclui uma conta bancaria | Bearer Token |
+| **Contas** | `POST` | `/contas/transferir` | Realiza transferencia patrimonial entre contas (suporta Idempotency-Key) | Bearer Token |
+| **Transacoes** | `GET` | `/transacoes` | Lista todas as transacoes | Bearer Token |
+| **Transacoes** | `GET` | `/transacoes/busca` | Filtro avancado (datas, categoria, conta, valores) | Bearer Token |
+| **Transacoes** | `GET` | `/transacoes/{id}` | Busca transacao por ID | Bearer Token |
+| **Transacoes** | `POST` | `/transacoes` | Cria uma transacao simples (suporta Idempotency-Key) | Bearer Token |
+| **Transacoes** | `POST` | `/transacoes/parcelado` | Cria compra parcelada sem perda de centavos (suporta Idempotency-Key) | Bearer Token |
+| **Transacoes** | `PUT` | `/transacoes/{id}` | Retifica uma transacao existente | Bearer Token |
+| **Transacoes** | `PATCH` | `/transacoes/{id}/efetivar` | Liquida uma transacao pendente | Bearer Token |
+| **Transacoes** | `DELETE` | `/transacoes/{id}` | Exclui transacao e estorna o saldo | Bearer Token |
+| **Recorrencias** | `GET` | `/recorrencias` | Lista todas as recorrencias cadastradas | Bearer Token |
+| **Recorrencias** | `GET` | `/recorrencias/ativas` | Lista apenas as recorrencias ativas | Bearer Token |
+| **Recorrencias** | `POST` | `/recorrencias` | Cria nova regra e projeta ocorrencias (suporta Idempotency-Key) | Bearer Token |
+| **Recorrencias** | `PUT` | `/recorrencias/{id}` | Atualiza plano e sincroniza filhas | Bearer Token |
+| **Recorrencias** | `PATCH` | `/recorrencias/{id}/status` | Ativa ou desativa a recorrencia | Bearer Token |
+| **Recorrencias** | `DELETE` | `/recorrencias/{id}` | Exclui a regra de recorrencia | Bearer Token |
+| **Categorias** | `GET` | `/categorias` | Lista catalogo de categorias cadastradas | Bearer Token |
 | **Categorias** | `POST` | `/categorias` | Cria uma nova categoria | Bearer Token |
 | **Categorias** | `PUT` | `/categorias/{id}` | Atualiza uma categoria | Bearer Token |
 | **Categorias** | `DELETE` | `/categorias/{id}` | Exclui uma categoria | Bearer Token |
-| **Orçamentos** | `GET` | `/orcamentos` | Lista metas e consumo em tempo real | Bearer Token |
-| **Orçamentos** | `GET` | `/orcamentos/competencia` | Consulta orçamento de uma competência específica | Bearer Token |
-| **Orçamentos** | `POST` | `/orcamentos` | Define teto mensal para categoria de despesa | Bearer Token |
-| **Orçamentos** | `PUT` | `/orcamentos/{id}` | Atualiza o teto do orçamento | Bearer Token |
-| **Orçamentos** | `DELETE` | `/orcamentos/{id}` | Exclui uma meta orçamentária | Bearer Token |
-| **Dashboard** | `GET` | `/dashboard` | Retorna métricas agregadas via CQRS | Bearer Token |
+| **Orcamentos** | `GET` | `/orcamentos` | Lista metas e consumo em tempo real | Bearer Token |
+| **Orcamentos** | `GET` | `/orcamentos/competencia` | Consulta orcamento de uma competencia especifica | Bearer Token |
+| **Orcamentos** | `POST` | `/orcamentos` | Define teto mensal para categoria de despesa | Bearer Token |
+| **Orcamentos** | `PUT` | `/orcamentos/{id}` | Atualiza o teto do orcamento | Bearer Token |
+| **Orcamentos** | `DELETE` | `/orcamentos/{id}` | Exclui uma meta orcamentaria | Bearer Token |
+| **Dashboard** | `GET` | `/dashboard` | Retorna metricas agregadas via CQRS | Bearer Token |
 
 ---
 
-##  Testes Automatizados
+## Testes Automatizados
 
-A aplicação conta com uma suíte de **30 testes unitários automatizados** cobrindo Value Objects, Agregados, Regras de Negócio e Casos de Uso:
+A aplicacao conta com uma suite completa de **64 testes automatizados** cobrindo Value Objects, Agregados, Regras de Negocio, Casos de Uso, Idempotencia Sequencial, Idempotencia Concorrente Multithread e Seguranca:
 
 ```bash
 mvn test
 ```
 
-Saída esperada:
+Saida esperada:
 ```
-[INFO] Tests run: 30, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 64, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 
 ---
 
-##  Autor
+## Autor
 
-Desenvolvido por **[Luiz Brandão](https://github.com/LuizhBrandao)**.
+Desenvolvido por [Luiz Brandao](https://github.com/LuizhBrandao).

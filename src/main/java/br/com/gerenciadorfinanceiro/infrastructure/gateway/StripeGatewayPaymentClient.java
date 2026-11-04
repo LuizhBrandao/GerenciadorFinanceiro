@@ -22,7 +22,7 @@ public class StripeGatewayPaymentClient implements GatewayPaymentClient {
     private static final Pattern UUID_V4_PATTERN = Pattern.compile(
             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
     );
-    private static final Pattern CPF_PATTERN = Pattern.compile("\\d{11}");
+    private static final Pattern CPF_PATTERN = Pattern.compile("(^\\d{11}$)|(\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})");
 
     private final Map<String, GatewayPaymentIntent> cobrancasPorChave = new ConcurrentHashMap<>();
     private final Map<String, GatewaySubscription> assinaturasPorChave = new ConcurrentHashMap<>();
